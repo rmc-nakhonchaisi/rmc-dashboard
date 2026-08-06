@@ -69,6 +69,8 @@
   table.mix-table tbody td.add-col-cell { background:#fafbfc; }
   .cell-input { border:none; background:transparent; text-align:center; font-size:13px; width:100%; }
   .cell-select { border:none; background:transparent; text-align:center; font-size:12px; width:100%; }
+  .cell-computed { display:block; text-align:center; font-size:13px; color:#374151; cursor:default; }
+  .multiplier-input { width:52px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.45); border-radius:4px; color:#fff; text-align:center; font-size:14px; padding:2px 4px; }
 
   .legend-row { display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start; margin-bottom:16px; font-size:13px; }
   .legend-group { display:flex; align-items:center; gap:8px; }
@@ -174,6 +176,19 @@ const PRODUCT_FIELD_MAP = {
   name: 'name', namyaType: 'namya_type', cement: 'cement', hin1: 'hin1',
   hin34: 'hin34', hin38: 'hin38', sand: 'sand', namyaKg: 'namya_kg', namyaCc: 'namya_cc',
 };
+// ฟิลด์ตัวเลขที่คำนวณอัตโนมัติ = ตัวคูณของ section × ค่าช่องเดียวกันใน "สูตร 1 คิว" (section แรก)
+const COMPUTED_FIELDS = ['cement', 'hin1', 'hin34', 'hin38', 'sand', 'namyaKg', 'namyaCc'];
+const ROUND_DECIMALS = { cement: 0, hin1: 0, hin34: 0, hin38: 0, sand: 0, namyaKg: 1, namyaCc: 0 };
+
+function computeDerivedValue(key, baseValue, multiplier) {
+  if (baseValue == null || baseValue === '' || baseValue === '-') return '-';
+  const num = parseFloat(String(baseValue).replace(/,/g, ''));
+  if (isNaN(num)) return baseValue;
+  const decimals = ROUND_DECIMALS[key] ?? 0;
+  const factor = Math.pow(10, decimals);
+  const result = Math.round(num * multiplier * factor) / factor;
+  return result.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
 const PILE_FIELD_MAP = {
   name: 'name', section: 'section_size', length: 'standard_length',
   weightPerM: 'weight_per_m', capacity: 'safe_capacity', mainRebar: 'main_rebar', spiral: 'spiral_rebar',
@@ -208,7 +223,7 @@ async function getDashboardData() {
   ]);
 
   const mixSections = sections.map(s => ({
-    id: s.id, name: s.name,
+    id: s.id, name: s.name, multiplier: s.multiplier == null ? null : Number(s.multiplier),
     products: products.filter(p => p.section_id === s.id).map(p => ({
       id: p.id, name: p.name, namyaType: p.namya_type,
       cement: p.cement, hin1: p.hin1, hin34: p.hin34, hin38: p.hin38, sand: p.sand,
@@ -238,10 +253,21 @@ function renderTabNav() {
 }
 
 // ---------- Concrete formula tab ----------
-function buildMixSectionHtml(section, term) {
-  const products = section.products.filter(p => !term || p.name.toLowerCase().includes(term));
-  let html = `<div class="mix-scroll"><table class="mix-table"><thead><tr><th class="section-name">${esc(section.name)}</th>`;
-  products.forEach(p => {
+function buildMixSectionHtml(section, term, baseSection) {
+  const indexed = section.products
+    .map((p, idx) => ({ p, idx }))
+    .filter(({ p }) => !term || p.name.toLowerCase().includes(term));
+  const isDerivedSection = section.multiplier != null;
+
+  let headerCell;
+  if (isDerivedSection) {
+    headerCell = `<th class="section-name"><input type="number" step="0.01" class="multiplier-input" value="${esc(section.multiplier)}" data-action="section-multiplier" data-section="${section.id}" /> คิว</th>`;
+  } else {
+    headerCell = `<th class="section-name">${esc(section.name)}</th>`;
+  }
+
+  let html = `<div class="mix-scroll"><table class="mix-table"><thead><tr>${headerCell}`;
+  indexed.forEach(({ p }) => {
     html += `<th class="product-col"><div class="product-col-inner">
       <input class="product-name-input" value="${esc(p.name)}" data-action="product-name" data-product="${p.id}" />
       <span class="link-remove" data-action="product-remove" data-product="${p.id}">&times;</span>
@@ -251,8 +277,9 @@ function buildMixSectionHtml(section, term) {
 
   ROW_DEFS.forEach(rd => {
     html += `<tr><td class="row-label">${esc(rd.label)} <span class="unit">${esc(rd.unit)}</span></td>`;
-    products.forEach(p => {
+    indexed.forEach(({ p, idx }) => {
       const isSelect = !!rd.isSelect;
+      const isComputed = isDerivedSection && !isSelect && COMPUTED_FIELDS.includes(rd.key) && baseSection && baseSection.products[idx];
       const bg = rd.colored ? NAMYA_COLORS[p.namyaType] : (isSelect ? NAMYA_COLORS[p.namyaType] : '#fff');
       html += `<td class="cell" style="background:${bg};">`;
       if (isSelect) {
@@ -261,6 +288,8 @@ function buildMixSectionHtml(section, term) {
           html += `<option value="${k}" ${p.namyaType === k ? 'selected' : ''}>${esc(NAMYA_LABELS[k])}</option>`;
         });
         html += `</select>`;
+      } else if (isComputed) {
+        html += `<span class="cell-computed" title="คำนวณจากสูตร 1 คิว × ตัวคูณ">${esc(p[rd.key])}</span>`;
       } else {
         html += `<input class="cell-input" value="${esc(p[rd.key])}" data-action="cell-value" data-product="${p.id}" data-key="${rd.key}" />`;
       }
@@ -280,7 +309,8 @@ function renderConcreteTab() {
       <h2>สูตรคอนกรีต</h2>
       <input class="search-box" placeholder="ค้นหาผลิตภัณฑ์..." id="concreteSearch" value="${esc(state.search)}" />
     </div>`;
-  state.mixSections.forEach(sec => { html += buildMixSectionHtml(sec, term); });
+  const baseSection = state.mixSections[0];
+  state.mixSections.forEach(sec => { html += buildMixSectionHtml(sec, term, baseSection); });
   html += `<div class="legend-row">
     <div class="legend-group">
       <span class="legend-label">ถพ.น้ำยา 1.08</span>
@@ -399,6 +429,31 @@ function findProduct(productId) {
 function findPile(id) { return state.pileRows.find(r => r.id === id) || null; }
 function findDrawing(id) { return state.drawings.find(d => d.id === id) || null; }
 
+// คำนวณค่าตัวเลขทั้งหมดของ section ที่มีตัวคูณ ใหม่จาก "สูตร 1 คิว" (section แรก)
+// อัปเดต state ในตัว และคืนรายการ patch สำหรับบันทึกลง Supabase
+function recomputeDerivedSection(sectionIdx) {
+  const section = state.mixSections[sectionIdx];
+  const base = state.mixSections[0];
+  if (!section || section.multiplier == null || !base) return [];
+  const patches = [];
+  section.products.forEach((p, idx) => {
+    const baseP = base.products[idx];
+    if (!baseP) return;
+    const patch = {};
+    COMPUTED_FIELDS.forEach(key => {
+      const newVal = computeDerivedValue(key, baseP[key], section.multiplier);
+      p[key] = newVal;
+      patch[PRODUCT_FIELD_MAP[key]] = newVal;
+    });
+    patches.push({ id: p.id, patch });
+  });
+  return patches;
+}
+
+async function persistPatches(patches) {
+  await Promise.all(patches.map(({ id, patch }) => sbFetch(`mix_products?id=eq.${id}`, 'PATCH', patch)));
+}
+
 // ---------- Event delegation ----------
 document.addEventListener('click', async (e) => {
   const t = e.target.closest('[data-action]');
@@ -479,6 +534,19 @@ document.addEventListener('change', async (e) => {
       if (p) p[t.dataset.key] = t.value;
       const col = PRODUCT_FIELD_MAP[t.dataset.key];
       await sbFetch(`mix_products?id=eq.${t.dataset.product}`, 'PATCH', { [col]: t.value });
+
+      // ถ้าแก้ค่าใน "สูตร 1 คิว" (section ฐาน) ให้คำนวณ section ที่มีตัวคูณใหม่ตาม
+      if (COMPUTED_FIELDS.includes(t.dataset.key) && state.mixSections[0] &&
+          state.mixSections[0].products.some(pp => pp.id === t.dataset.product)) {
+        let patches = [];
+        for (let i = 1; i < state.mixSections.length; i++) {
+          patches = patches.concat(recomputeDerivedSection(i));
+        }
+        if (patches.length) {
+          renderConcreteTab();
+          await persistPatches(patches);
+        }
+      }
     } else if (action === 'cell-select') {
       const p = findProduct(t.dataset.product);
       if (p) p.namyaType = t.value;
@@ -491,6 +559,17 @@ document.addEventListener('change', async (e) => {
       await sbFetch(`pile_specs?id=eq.${t.dataset.id}`, 'PATCH', { [col]: t.value });
     } else if (action === 'new-drawing-field') {
       state.newDrawing[t.dataset.key] = t.value;
+    } else if (action === 'section-multiplier') {
+      const sec = state.mixSections.find(s => s.id === t.dataset.section);
+      const val = parseFloat(t.value);
+      if (sec && !isNaN(val)) {
+        sec.multiplier = val;
+        const sectionIdx = state.mixSections.indexOf(sec);
+        const patches = recomputeDerivedSection(sectionIdx);
+        renderConcreteTab();
+        await sbFetch(`mix_sections?id=eq.${sec.id}`, 'PATCH', { multiplier: val });
+        await persistPatches(patches);
+      }
     }
   } catch (err) {
     showError(err.message || String(err));
