@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ร่วมมิตรคอนกรีต(นครชัยศรี) - สูตรคอนกรีต / Spec เสาเข็ม / Shop drawing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:#f4f6f9; --card:#ffffff; --border:#e5e9ef; --table-border:#dfe4ea;
+    --ink:#1f2937; --ink-soft:#4b5563; --muted:#6b7280;
+    --blue:#2563eb; --blue-dark:#1d4ed8; --navy:#1f3a63;
+    --red:#dc2626; --green-btn:#16a34a;
+    --namya-blue:#29ABE2; --namya-green:#92D050; --namya-orange:#F4B183;
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; padding:0; }
+  body { font-family:'Noto Sans Thai', system-ui, sans-serif; background:var(--bg); color:var(--ink); }
+  a { color:var(--blue); }
+  a:hover { color:var(--blue-dark); }
+  input, select, button { font-family:'Noto Sans Thai', system-ui, sans-serif; }
+
+  .header { background:#fff; border-bottom:1px solid var(--border); padding:16px 28px; }
+  .header-inner { display:flex; align-items:center; gap:14px; }
+  .logo { width:64px; height:64px; border-radius:12px; border:3px solid var(--red); display:flex; flex-direction:column; align-items:center; justify-content:center; background:#fff; flex-shrink:0; }
+  .logo-word { font-size:19px; font-weight:800; letter-spacing:0.5px; line-height:1; }
+  .logo-word .r, .logo-word .c { color:var(--red); }
+  .logo-word .m { color:var(--blue-dark); }
+  .logo-dots { display:flex; gap:3px; margin-top:4px; }
+  .logo-dots span { width:5px; height:5px; border-radius:50%; }
+  .logo-dots span:nth-child(odd) { background:var(--red); }
+  .logo-dots span:nth-child(even) { background:var(--blue-dark); }
+  .company-name { font-size:20px; font-weight:700; color:var(--ink); }
+  .company-sub { font-size:15px; font-weight:600; color:var(--blue); margin-top:2px; }
+
+  .tabnav { background:#fff; border-bottom:1px solid var(--border); padding:0 20px; display:flex; flex-wrap:wrap; gap:2px; }
+  .tabnav button { border:none; background:transparent; cursor:pointer; padding:14px; font-size:13px; font-weight:500; color:var(--ink-soft); border-bottom:3px solid transparent; white-space:nowrap; }
+  .tabnav button.active { font-weight:700; color:var(--blue); border-bottom-color:var(--blue); }
+
+  .page { padding:24px 28px 60px; }
+  .card { background:#fff; border:1px solid var(--border); border-radius:10px; padding:20px 22px; }
+  .card-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
+  .card-head h2 { margin:0; font-size:18px; color:var(--ink); }
+  .search-box { border:1px solid #d1d5db; border-radius:6px; padding:7px 12px; font-size:13px; width:220px; }
+  .head-actions { display:flex; gap:10px; }
+
+  .btn-primary { border:none; background:var(--blue); color:#fff; border-radius:6px; padding:7px 14px; font-size:13px; cursor:pointer; }
+  .btn-primary:disabled { opacity:.6; cursor:default; }
+  .btn-add-col { border:none; background:var(--blue); color:#fff; border-radius:6px; padding:5px 10px; cursor:pointer; font-size:16px; line-height:1; }
+  .btn-green { border:none; background:var(--green-btn); color:#fff; border-radius:6px; padding:7px 14px; font-size:13px; cursor:pointer; }
+  .btn-plain { border:1px solid #d1d5db; background:#fff; color:#374151; border-radius:6px; padding:7px 14px; font-size:13px; cursor:pointer; }
+  .link-remove { cursor:pointer; color:var(--red); font-size:13px; font-weight:700; }
+  .link-view { cursor:pointer; color:var(--blue); font-size:13px; margin-right:12px; }
+  .link-del { cursor:pointer; color:var(--red); font-size:13px; }
+
+  .mix-scroll { margin-bottom:28px; overflow-x:auto; }
+  table.mix-table { border-collapse:collapse; min-width:max-content; width:100%; }
+  table.mix-table th, table.mix-table td { border:1px solid var(--table-border); }
+  table.mix-table thead th.section-name { background:var(--navy); color:#fff; padding:10px 14px; text-align:left; min-width:180px; font-weight:400; }
+  table.mix-table thead th.product-col { background:#eef2f7; padding:8px; text-align:center; min-width:110px; }
+  table.mix-table thead th.add-col { background:#eef2f7; min-width:44px; text-align:center; }
+  .product-col-inner { display:flex; align-items:center; gap:4px; justify-content:center; }
+  .product-name-input { border:none; background:transparent; text-align:center; font-weight:700; font-size:12px; width:90px; color:var(--ink); }
+  table.mix-table tbody td.row-label { padding:8px 14px; font-weight:700; color:#374151; background:#fafbfc; }
+  table.mix-table tbody td.row-label .unit { font-weight:400; color:#9ca3af; font-size:11px; }
+  table.mix-table tbody td.cell { padding:6px; text-align:center; }
+  table.mix-table tbody td.add-col-cell { background:#fafbfc; }
+  .cell-input { border:none; background:transparent; text-align:center; font-size:13px; width:100%; }
+  .cell-select { border:none; background:transparent; text-align:center; font-size:12px; width:100%; }
+
+  .legend-row { display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start; margin-bottom:16px; font-size:13px; }
+  .legend-group { display:flex; align-items:center; gap:8px; }
+  .legend-label { font-weight:600; color:#374151; }
+  .legend-chip { padding:3px 8px; border-radius:4px; }
+  .hint-note { font-size:13px; color:var(--muted); font-style:italic; }
+
+  table.plain-table { width:100%; border-collapse:collapse; }
+  table.plain-table thead tr { background:var(--navy); color:#fff; }
+  table.plain-table thead th { padding:10px; text-align:left; font-weight:400; }
+  table.plain-table tbody tr { border-bottom:1px solid #eef1f5; }
+  table.plain-table tbody td { padding:6px 10px; }
+  table.plain-table tbody td input { border:none; background:transparent; width:100%; }
+  .pile-scroll, .drawing-scroll { overflow-x:auto; }
+  table.pile-table { min-width:900px; }
+  table.pile-table td input.f-name { font-weight:700; }
+
+  table.drawing-table { min-width:820px; }
+  table.drawing-table tbody td { padding:8px 10px; }
+  .pdf-badge { width:32px; height:32px; border-radius:6px; background:var(--red); color:#fff; font-size:9px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .fname-cell { font-weight:600; }
+
+  .add-drawing-form { display:flex; flex-wrap:wrap; gap:8px; align-items:center; background:#f7f9fc; border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:16px; }
+  .add-drawing-form input { border:1px solid #d1d5db; border-radius:6px; padding:6px 10px; font-size:13px; }
+
+  .loading-overlay { position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center; flex-direction:column; gap:14px; z-index:200; }
+  .spinner { width:40px; height:40px; border-radius:50%; border:3px solid var(--table-border); border-top-color:var(--blue); animation:spin .75s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .err-banner { background:#fff3f3; border:1px solid #f0b0b0; color:#9b1c1c; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:13px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-word"><span class="r">R</span><span class="m">M</span><span class="c">C</span></div>
+      <div class="logo-dots"><span></span><span></span><span></span><span></span></div>
+    </div>
+    <div>
+      <div class="company-name">บริษัท ร่วมมิตรคอนกรีต(นครชัยศรี) จำกัด</div>
+      <div class="company-sub">รายงานการผลิตเสาเข็มคอนกรีตอัดแรง</div>
+    </div>
+  </div>
+</div>
+
+<div class="tabnav" id="tabnav"></div>
+<div class="page"><div id="tabContent"></div></div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div>กำลังโหลดข้อมูล...</div>
+</div>
+
+<script>
+// ============================================================
+// เชื่อม Supabase โดยตรงจากเบราว์เซอร์ (ใช้ publishable key เท่านั้น
+// ปลอดภัยที่จะฝังในโค้ด client — ตารางเปิด RLS "allow all" ไว้แล้ว)
+// ============================================================
+const SUPABASE_URL = 'https://xhalgbxkhwrfrdrnrptb.supabase.co';
+const SUPABASE_KEY  = 'sb_publishable_-TA-9Yc_j_uZ6_0PIxCY_w_iENck1hq';
+
+async function sbFetch(path, method, body) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    method: method || 'GET',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation',
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Supabase error ${res.status}: ${text}`);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+const NAMYA_LABELS = { blue: 'PCE(silkroad)', green: 'PCE(DB)', orange: 'แนปทาลีน(DB)' };
+const NAMYA_COLORS = { blue: '#29ABE2', green: '#92D050', orange: '#F4B183' };
+
+const ROW_DEFS = [
+  { key: 'namyaType', label: 'ประเภทน้ำยา', unit: '', isSelect: true },
+  { key: 'cement', label: 'Cement', unit: '[กก.]' },
+  { key: 'hin1', label: 'หิน 1"', unit: '[กก.]' },
+  { key: 'hin34', label: 'หิน 3/4"', unit: '[กก.]' },
+  { key: 'hin38', label: 'หิน 3/8"', unit: '[กก.]' },
+  { key: 'sand', label: 'ทราย', unit: '[กก.]' },
+  { key: 'namyaKg', label: 'น้ำยา', unit: '[กก.]', colored: true },
+  { key: 'namyaCc', label: 'น้ำยา', unit: '[ซีซี]', colored: true },
+];
+
+const TABS = [
+  { id: 'concrete', label: 'สูตรคอนกรีต' },
+  { id: 'pilespec', label: 'Spec ผลิตภัณฑ์เสาเข็ม' },
+  { id: 'shopdrawing', label: 'Shop drawing' },
+];
+
+const PRODUCT_FIELD_MAP = {
+  name: 'name', namyaType: 'namya_type', cement: 'cement', hin1: 'hin1',
+  hin34: 'hin34', hin38: 'hin38', sand: 'sand', namyaKg: 'namya_kg', namyaCc: 'namya_cc',
+};
+const PILE_FIELD_MAP = {
+  name: 'name', section: 'section_size', length: 'standard_length',
+  weightPerM: 'weight_per_m', capacity: 'safe_capacity', mainRebar: 'main_rebar', spiral: 'spiral_rebar',
+};
+
+let state = {
+  activeTab: 'concrete',
+  search: '',
+  mixSections: [],
+  pileSearch: '',
+  pileRows: [],
+  drawingSearch: '',
+  drawings: [],
+  showAddDrawing: false,
+  newDrawing: { fileName: '', pileType: '', rev: '', date: '', uploadedBy: '', size: '' },
+};
+
+function esc(v) {
+  return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function showError(msg) {
+  document.getElementById('tabContent').insertAdjacentHTML('afterbegin', `<div class="err-banner">เกิดข้อผิดพลาด: ${esc(msg)}</div>`);
+}
+
+// ---------- Data loading ----------
+async function getDashboardData() {
+  const [sections, products, pileRows, drawings] = await Promise.all([
+    sbFetch('mix_sections?select=*&order=sort_order.asc'),
+    sbFetch('mix_products?select=*&order=sort_order.asc'),
+    sbFetch('pile_specs?select=*&order=sort_order.asc'),
+    sbFetch('shop_drawings?select=*&order=created_at.desc'),
+  ]);
+
+  const mixSections = sections.map(s => ({
+    id: s.id, name: s.name,
+    products: products.filter(p => p.section_id === s.id).map(p => ({
+      id: p.id, name: p.name, namyaType: p.namya_type,
+      cement: p.cement, hin1: p.hin1, hin34: p.hin34, hin38: p.hin38, sand: p.sand,
+      namyaKg: p.namya_kg, namyaCc: p.namya_cc,
+    })),
+  }));
+
+  return {
+    mixSections,
+    pileRows: pileRows.map(r => ({
+      id: r.id, name: r.name, section: r.section_size, length: r.standard_length,
+      weightPerM: r.weight_per_m, capacity: r.safe_capacity, mainRebar: r.main_rebar, spiral: r.spiral_rebar,
+    })),
+    drawings: drawings.map(d => ({
+      id: d.id, fileName: d.file_name, pileType: d.pile_type, rev: d.rev,
+      date: d.drawing_date, uploadedBy: d.uploaded_by, size: d.file_size,
+    })),
+  };
+}
+
+// ---------- Tab nav ----------
+function renderTabNav() {
+  const nav = document.getElementById('tabnav');
+  nav.innerHTML = TABS.map(t =>
+    `<button data-action="set-tab" data-tab="${t.id}" class="${state.activeTab === t.id ? 'active' : ''}">${esc(t.label)}</button>`
+  ).join('');
+}
+
+// ---------- Concrete formula tab ----------
+function buildMixSectionHtml(section, term) {
+  const products = section.products.filter(p => !term || p.name.toLowerCase().includes(term));
+  let html = `<div class="mix-scroll"><table class="mix-table"><thead><tr><th class="section-name">${esc(section.name)}</th>`;
+  products.forEach(p => {
+    html += `<th class="product-col"><div class="product-col-inner">
+      <input class="product-name-input" value="${esc(p.name)}" data-action="product-name" data-product="${p.id}" />
+      <span class="link-remove" data-action="product-remove" data-product="${p.id}">&times;</span>
+    </div></th>`;
+  });
+  html += `<th class="add-col"><button class="btn-add-col" data-action="product-add" data-section="${section.id}">+</button></th></tr></thead><tbody>`;
+
+  ROW_DEFS.forEach(rd => {
+    html += `<tr><td class="row-label">${esc(rd.label)} <span class="unit">${esc(rd.unit)}</span></td>`;
+    products.forEach(p => {
+      const isSelect = !!rd.isSelect;
+      const bg = rd.colored ? NAMYA_COLORS[p.namyaType] : (isSelect ? NAMYA_COLORS[p.namyaType] : '#fff');
+      html += `<td class="cell" style="background:${bg};">`;
+      if (isSelect) {
+        html += `<select class="cell-select" data-action="cell-select" data-product="${p.id}">`;
+        ['blue', 'green', 'orange'].forEach(k => {
+          html += `<option value="${k}" ${p.namyaType === k ? 'selected' : ''}>${esc(NAMYA_LABELS[k])}</option>`;
+        });
+        html += `</select>`;
+      } else {
+        html += `<input class="cell-input" value="${esc(p[rd.key])}" data-action="cell-value" data-product="${p.id}" data-key="${rd.key}" />`;
+      }
+      html += `</td>`;
+    });
+    html += `<td class="add-col-cell"></td></tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  return html;
+}
+
+function renderConcreteTab() {
+  const term = (state.search || '').trim().toLowerCase();
+  let html = `<div class="card">
+    <div class="card-head">
+      <h2>สูตรคอนกรีต</h2>
+      <input class="search-box" placeholder="ค้นหาผลิตภัณฑ์..." id="concreteSearch" value="${esc(state.search)}" />
+    </div>`;
+  state.mixSections.forEach(sec => { html += buildMixSectionHtml(sec, term); });
+  html += `<div class="legend-row">
+    <div class="legend-group">
+      <span class="legend-label">ถพ.น้ำยา 1.08</span>
+      <span class="legend-chip" style="background:${NAMYA_COLORS.blue};color:#fff;">PCE(silkroad)</span>
+      <span class="legend-chip" style="background:${NAMYA_COLORS.green};color:#1f2937;">PCE(DB)</span>
+    </div>
+    <div class="legend-group">
+      <span class="legend-label">ถพ.น้ำยา 1.25</span>
+      <span class="legend-chip" style="background:${NAMYA_COLORS.orange};color:#1f2937;">แนปทาลีน(DB)</span>
+    </div>
+  </div>
+  <div class="hint-note">* คลิกที่ค่าตัวเลขหรือชื่อผลิตภัณฑ์เพื่อแก้ไข — สามารถเลือกได้เปลี่ยนได้</div>
+  </div>`;
+  document.getElementById('tabContent').innerHTML = html;
+}
+
+// ---------- Pile spec tab ----------
+function renderPileSpecTab() {
+  const term = (state.pileSearch || '').trim().toLowerCase();
+  const rows = state.pileRows.filter(r => !term || r.name.toLowerCase().includes(term) || r.section.toLowerCase().includes(term));
+  let html = `<div class="card">
+    <div class="card-head">
+      <h2>Spec ผลิตภัณฑ์เสาเข็ม</h2>
+      <div class="head-actions">
+        <input class="search-box" placeholder="ค้นหารุ่น..." id="pileSearch" value="${esc(state.pileSearch)}" style="width:200px;" />
+        <button class="btn-primary" data-action="pile-add">+ เพิ่มรุ่น</button>
+      </div>
+    </div>
+    <div class="pile-scroll"><table class="plain-table pile-table">
+      <thead><tr>
+        <th>รุ่นเสาเข็ม</th><th>ขนาดหน้าตัด</th><th>ความยาวมาตรฐาน</th><th>น้ำหนักโดยประมาณ</th>
+        <th>กำลังรับน้ำหนักปลอดภัย</th><th>เหล็กเสริมหลัก</th><th>เหล็กปลอกเกลียว</th><th></th>
+      </tr></thead>
+      <tbody>`;
+  rows.forEach(r => {
+    html += `<tr>
+      <td><input class="f-name" value="${esc(r.name)}" data-action="pile-field" data-id="${r.id}" data-key="name" /></td>
+      <td><input value="${esc(r.section)}" data-action="pile-field" data-id="${r.id}" data-key="section" /></td>
+      <td><input value="${esc(r.length)}" data-action="pile-field" data-id="${r.id}" data-key="length" /></td>
+      <td><input value="${esc(r.weightPerM)}" data-action="pile-field" data-id="${r.id}" data-key="weightPerM" /></td>
+      <td><input value="${esc(r.capacity)}" data-action="pile-field" data-id="${r.id}" data-key="capacity" /></td>
+      <td><input value="${esc(r.mainRebar)}" data-action="pile-field" data-id="${r.id}" data-key="mainRebar" /></td>
+      <td><input value="${esc(r.spiral)}" data-action="pile-field" data-id="${r.id}" data-key="spiral" /></td>
+      <td style="text-align:center;"><span class="link-remove" data-action="pile-remove" data-id="${r.id}">&times;</span></td>
+    </tr>`;
+  });
+  html += `</tbody></table></div></div>`;
+  document.getElementById('tabContent').innerHTML = html;
+}
+
+// ---------- Shop drawing tab ----------
+function renderShopDrawingTab() {
+  const term = (state.drawingSearch || '').trim().toLowerCase();
+  const rows = state.drawings.filter(d => !term || d.fileName.toLowerCase().includes(term) || d.pileType.toLowerCase().includes(term));
+  let html = `<div class="card">
+    <div class="card-head">
+      <h2>Shop drawing</h2>
+      <div class="head-actions">
+        <input class="search-box" placeholder="ค้นหาไฟล์..." id="drawingSearch" value="${esc(state.drawingSearch)}" style="width:200px;" />
+        <button class="btn-primary" data-action="drawing-toggle-add">+ เพิ่มแบบ</button>
+      </div>
+    </div>`;
+
+  if (state.showAddDrawing) {
+    const nd = state.newDrawing;
+    html += `<div class="add-drawing-form">
+      <input placeholder="ชื่อไฟล์.pdf" style="width:200px;" data-action="new-drawing-field" data-key="fileName" value="${esc(nd.fileName)}" />
+      <input placeholder="ประเภทเสาเข็ม" style="width:110px;" data-action="new-drawing-field" data-key="pileType" value="${esc(nd.pileType)}" />
+      <input placeholder="Rev." style="width:80px;" data-action="new-drawing-field" data-key="rev" value="${esc(nd.rev)}" />
+      <input placeholder="วันที่" style="width:110px;" data-action="new-drawing-field" data-key="date" value="${esc(nd.date)}" />
+      <input placeholder="ผู้อัปโหลด" style="width:110px;" data-action="new-drawing-field" data-key="uploadedBy" value="${esc(nd.uploadedBy)}" />
+      <input placeholder="ขนาดไฟล์" style="width:90px;" data-action="new-drawing-field" data-key="size" value="${esc(nd.size)}" />
+      <button class="btn-green" data-action="drawing-save">บันทึก</button>
+      <button class="btn-plain" data-action="drawing-toggle-add">ยกเลิก</button>
+    </div>`;
+  }
+
+  html += `<div class="drawing-scroll"><table class="plain-table drawing-table">
+      <thead><tr>
+        <th></th><th>ชื่อไฟล์</th><th>ประเภทเสาเข็ม</th><th>Rev.</th><th>วันที่</th><th>ผู้อัปโหลด</th><th>ขนาดไฟล์</th><th style="text-align:center;">จัดการ</th>
+      </tr></thead>
+      <tbody>`;
+  rows.forEach(d => {
+    html += `<tr>
+      <td><div class="pdf-badge">PDF</div></td>
+      <td class="fname-cell">${esc(d.fileName)}</td>
+      <td>${esc(d.pileType)}</td>
+      <td>${esc(d.rev)}</td>
+      <td>${esc(d.date)}</td>
+      <td>${esc(d.uploadedBy)}</td>
+      <td>${esc(d.size)}</td>
+      <td style="text-align:center;">
+        <span class="link-view" data-action="drawing-view" data-id="${d.id}">ดู</span>
+        <span class="link-del" data-action="drawing-remove" data-id="${d.id}">ลบ</span>
+      </td>
+    </tr>`;
+  });
+  html += `</tbody></table></div></div>`;
+  document.getElementById('tabContent').innerHTML = html;
+}
+
+function renderTabContent() {
+  if (state.activeTab === 'concrete') renderConcreteTab();
+  else if (state.activeTab === 'pilespec') renderPileSpecTab();
+  else if (state.activeTab === 'shopdrawing') renderShopDrawingTab();
+}
+function render() { renderTabNav(); renderTabContent(); }
+
+function findProduct(productId) {
+  for (const sec of state.mixSections) {
+    const p = sec.products.find(x => x.id === productId);
+    if (p) return p;
+  }
+  return null;
+}
+function findPile(id) { return state.pileRows.find(r => r.id === id) || null; }
+function findDrawing(id) { return state.drawings.find(d => d.id === id) || null; }
+
+// ---------- Event delegation ----------
+document.addEventListener('click', async (e) => {
+  const t = e.target.closest('[data-action]');
+  if (!t) return;
+  const action = t.dataset.action;
+
+  try {
+    if (action === 'set-tab') {
+      state.activeTab = t.dataset.tab;
+      render();
+    } else if (action === 'product-remove') {
+      const pid = t.dataset.product;
+      state.mixSections.forEach(sec => { sec.products = sec.products.filter(p => p.id !== pid); });
+      renderConcreteTab();
+      await sbFetch(`mix_products?id=eq.${pid}`, 'DELETE');
+    } else if (action === 'product-add') {
+      t.disabled = true;
+      const sectionId = t.dataset.section;
+      const rows = await sbFetch('mix_products', 'POST', {
+        section_id: sectionId, name: 'ผลิตภัณฑ์ใหม่', namya_type: 'blue',
+        cement: '0', hin1: '-', hin34: '-', hin38: '0', sand: '0', namya_kg: '0', namya_cc: '0', sort_order: 999,
+      });
+      const sec = state.mixSections.find(s => s.id === sectionId);
+      if (sec) sec.products.push({ id: rows[0].id, name: 'ผลิตภัณฑ์ใหม่', namyaType: 'blue', cement: '0', hin1: '-', hin34: '-', hin38: '0', sand: '0', namyaKg: '0', namyaCc: '0' });
+      renderConcreteTab();
+    } else if (action === 'pile-add') {
+      t.disabled = true;
+      const rows = await sbFetch('pile_specs', 'POST', {
+        name: 'ใหม่', section_size: '', standard_length: '', weight_per_m: '', safe_capacity: '', main_rebar: '', spiral_rebar: '', sort_order: 999,
+      });
+      state.pileRows.push({ id: rows[0].id, name: 'ใหม่', section: '', length: '', weightPerM: '', capacity: '', mainRebar: '', spiral: '' });
+      renderPileSpecTab();
+    } else if (action === 'pile-remove') {
+      const id = t.dataset.id;
+      state.pileRows = state.pileRows.filter(r => r.id !== id);
+      renderPileSpecTab();
+      await sbFetch(`pile_specs?id=eq.${id}`, 'DELETE');
+    } else if (action === 'drawing-toggle-add') {
+      state.showAddDrawing = !state.showAddDrawing;
+      renderShopDrawingTab();
+    } else if (action === 'drawing-save') {
+      const nd = state.newDrawing;
+      if (!nd.fileName.trim()) return;
+      t.disabled = true;
+      const rows = await sbFetch('shop_drawings', 'POST', {
+        file_name: nd.fileName, pile_type: nd.pileType, rev: nd.rev, drawing_date: nd.date, uploaded_by: nd.uploadedBy, file_size: nd.size,
+      });
+      state.drawings.unshift({ id: rows[0].id, ...nd });
+      state.newDrawing = { fileName: '', pileType: '', rev: '', date: '', uploadedBy: '', size: '' };
+      state.showAddDrawing = false;
+      renderShopDrawingTab();
+    } else if (action === 'drawing-remove') {
+      const id = t.dataset.id;
+      state.drawings = state.drawings.filter(d => d.id !== id);
+      renderShopDrawingTab();
+      await sbFetch(`shop_drawings?id=eq.${id}`, 'DELETE');
+    } else if (action === 'drawing-view') {
+      const d = findDrawing(t.dataset.id);
+      window.alert('ตัวอย่างเท่านั้น: ' + (d ? d.fileName : ''));
+    }
+  } catch (err) {
+    showError(err.message || String(err));
+  }
+});
+
+document.addEventListener('change', async (e) => {
+  const t = e.target.closest('[data-action]');
+  if (!t) return;
+  const action = t.dataset.action;
+
+  try {
+    if (action === 'product-name') {
+      const p = findProduct(t.dataset.product);
+      if (p) p.name = t.value;
+      await sbFetch(`mix_products?id=eq.${t.dataset.product}`, 'PATCH', { name: t.value });
+    } else if (action === 'cell-value') {
+      const p = findProduct(t.dataset.product);
+      if (p) p[t.dataset.key] = t.value;
+      const col = PRODUCT_FIELD_MAP[t.dataset.key];
+      await sbFetch(`mix_products?id=eq.${t.dataset.product}`, 'PATCH', { [col]: t.value });
+    } else if (action === 'cell-select') {
+      const p = findProduct(t.dataset.product);
+      if (p) p.namyaType = t.value;
+      renderConcreteTab();
+      await sbFetch(`mix_products?id=eq.${t.dataset.product}`, 'PATCH', { namya_type: t.value });
+    } else if (action === 'pile-field') {
+      const r = findPile(t.dataset.id);
+      if (r) r[t.dataset.key] = t.value;
+      const col = PILE_FIELD_MAP[t.dataset.key];
+      await sbFetch(`pile_specs?id=eq.${t.dataset.id}`, 'PATCH', { [col]: t.value });
+    } else if (action === 'new-drawing-field') {
+      state.newDrawing[t.dataset.key] = t.value;
+    }
+  } catch (err) {
+    showError(err.message || String(err));
+  }
+});
+
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'concreteSearch') {
+    state.search = e.target.value;
+    renderConcreteTab();
+  } else if (e.target.id === 'pileSearch') {
+    state.pileSearch = e.target.value;
+    renderPileSpecTab();
+  } else if (e.target.id === 'drawingSearch') {
+    state.drawingSearch = e.target.value;
+    renderShopDrawingTab();
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.closest('[data-action]')) {
+    e.target.blur();
+  }
+});
+
+// ---------- Boot ----------
+(async function boot() {
+  try {
+    const data = await getDashboardData();
+    state.mixSections = data.mixSections;
+    state.pileRows = data.pileRows;
+    state.drawings = data.drawings;
+    render();
+    document.getElementById('loadingOverlay').style.display = 'none';
+  } catch (err) {
+    document.getElementById('loadingOverlay').innerHTML = '<div class="err-banner">โหลดข้อมูลไม่สำเร็จ: ' + esc(err.message || String(err)) + '</div>';
+  }
+})();
+</script>
+</body>
+</html>
