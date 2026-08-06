@@ -272,12 +272,14 @@ function buildMixSectionHtml(section, term, baseSection) {
     const nameField = isNameLinked
       ? `<span class="product-name-input" style="cursor:default;" title="ชื่อตามสูตร 1 คิว">${esc(p.name)}</span>`
       : `<input class="product-name-input" value="${esc(p.name)}" data-action="product-name" data-product="${p.id}" />`;
+    const removeBtn = isDerivedSection ? '' : `<span class="link-remove" data-action="product-remove" data-product="${p.id}">&times;</span>`;
     html += `<th class="product-col"><div class="product-col-inner">
       ${nameField}
-      <span class="link-remove" data-action="product-remove" data-product="${p.id}">&times;</span>
+      ${removeBtn}
     </div></th>`;
   });
-  html += `<th class="add-col"><button class="btn-add-col" data-action="product-add" data-section="${section.id}">+</button></th></tr></thead><tbody>`;
+  const addColCell = isDerivedSection ? '' : `<th class="add-col"><button class="btn-add-col" data-action="product-add" data-section="${section.id}">+</button></th>`;
+  html += `${addColCell}</tr></thead><tbody>`;
 
   ROW_DEFS.forEach(rd => {
     html += `<tr><td class="row-label">${esc(rd.label)} <span class="unit">${esc(rd.unit)}</span></td>`;
@@ -299,7 +301,8 @@ function buildMixSectionHtml(section, term, baseSection) {
       }
       html += `</td>`;
     });
-    html += `<td class="add-col-cell"></td></tr>`;
+    if (!isDerivedSection) html += `<td class="add-col-cell"></td>`;
+    html += `</tr>`;
   });
 
   html += `</tbody></table></div>`;
