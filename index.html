@@ -285,10 +285,13 @@ function buildMixSectionHtml(section, term, baseSection) {
     html += `<tr><td class="row-label">${esc(rd.label)} <span class="unit">${esc(rd.unit)}</span></td>`;
     indexed.forEach(({ p, idx }) => {
       const isSelect = !!rd.isSelect;
+      const isTypeLinked = isSelect && isDerivedSection && baseSection && baseSection.products[idx];
       const isComputed = isDerivedSection && !isSelect && COMPUTED_FIELDS.includes(rd.key) && baseSection && baseSection.products[idx];
       const bg = rd.colored ? NAMYA_COLORS[p.namyaType] : (isSelect ? NAMYA_COLORS[p.namyaType] : '#fff');
       html += `<td class="cell" style="background:${bg};">`;
-      if (isSelect) {
+      if (isTypeLinked) {
+        html += `<span class="cell-computed" title="ตามสูตร 1 คิว">${esc(NAMYA_LABELS[p.namyaType])}</span>`;
+      } else if (isSelect) {
         html += `<select class="cell-select" data-action="cell-select" data-product="${p.id}">`;
         ['blue', 'green', 'orange'].forEach(k => {
           html += `<option value="${k}" ${p.namyaType === k ? 'selected' : ''}>${esc(NAMYA_LABELS[k])}</option>`;
@@ -448,6 +451,7 @@ function recomputeDerivedSection(sectionIdx) {
     if (!baseP) return;
     const patch = {};
     if (p.name !== baseP.name) { p.name = baseP.name; patch.name = baseP.name; }
+    if (p.namyaType !== baseP.namyaType) { p.namyaType = baseP.namyaType; patch.namya_type = baseP.namyaType; }
     COMPUTED_FIELDS.forEach(key => {
       const newVal = computeDerivedValue(key, baseP[key], section.multiplier);
       p[key] = newVal;
@@ -570,8 +574,16 @@ document.addEventListener('change', async (e) => {
     } else if (action === 'cell-select') {
       const p = findProduct(t.dataset.product);
       if (p) p.namyaType = t.value;
-      renderConcreteTab();
       await sbFetch(`mix_products?id=eq.${t.dataset.product}`, 'PATCH', { namya_type: t.value });
+
+      let patches = [];
+      if (state.mixSections[0] && state.mixSections[0].products.some(pp => pp.id === t.dataset.product)) {
+        for (let i = 1; i < state.mixSections.length; i++) {
+          patches = patches.concat(recomputeDerivedSection(i));
+        }
+      }
+      renderConcreteTab();
+      if (patches.length) await persistPatches(patches);
     } else if (action === 'pile-field') {
       const r = findPile(t.dataset.id);
       if (r) r[t.dataset.key] = t.value;
