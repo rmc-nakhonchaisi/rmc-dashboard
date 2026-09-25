@@ -163,6 +163,7 @@ const ROW_DEFS = [
   { key: 'hin34', label: 'หิน 3/4"', unit: '[กก.]' },
   { key: 'hin38', label: 'หิน 3/8"', unit: '[กก.]' },
   { key: 'sand', label: 'ทราย', unit: '[กก.]' },
+  { key: 'water', label: 'น้ำ', unit: '[กก.]' },
   { key: 'namyaKg', label: 'น้ำยา', unit: '[กก.]', colored: true },
   { key: 'namyaCc', label: 'น้ำยา', unit: '[ซีซี]', colored: true },
   { key: 'namyaType', label: 'ประเภทน้ำยา', unit: '', isSelect: true },
@@ -176,11 +177,11 @@ const TABS = [
 
 const PRODUCT_FIELD_MAP = {
   name: 'name', namyaType: 'namya_type', cement: 'cement', hin1: 'hin1',
-  hin34: 'hin34', hin38: 'hin38', sand: 'sand', namyaKg: 'namya_kg', namyaCc: 'namya_cc',
+  hin34: 'hin34', hin38: 'hin38', sand: 'sand', water: 'water', namyaKg: 'namya_kg', namyaCc: 'namya_cc',
 };
 // ฟิลด์ตัวเลขที่คำนวณอัตโนมัติ = ตัวคูณของ section × ค่าช่องเดียวกันใน "สูตร 1 คิว" (section แรก)
-const COMPUTED_FIELDS = ['cement', 'hin1', 'hin34', 'hin38', 'sand', 'namyaKg', 'namyaCc'];
-const ROUND_DECIMALS = { cement: 0, hin1: 0, hin34: 0, hin38: 0, sand: 0, namyaKg: 1, namyaCc: 0 };
+const COMPUTED_FIELDS = ['cement', 'hin1', 'hin34', 'hin38', 'sand', 'water', 'namyaKg', 'namyaCc'];
+const ROUND_DECIMALS = { cement: 0, hin1: 0, hin34: 0, hin38: 0, sand: 0, water: 0, namyaKg: 1, namyaCc: 0 };
 
 function computeDerivedValue(key, baseValue, multiplier) {
   if (baseValue == null || baseValue === '' || baseValue === '-') return '-';
@@ -228,7 +229,7 @@ async function getDashboardData() {
     id: s.id, name: s.name, multiplier: s.multiplier == null ? null : Number(s.multiplier),
     products: products.filter(p => p.section_id === s.id).map(p => ({
       id: p.id, name: p.name, namyaType: p.namya_type,
-      cement: p.cement, hin1: p.hin1, hin34: p.hin34, hin38: p.hin38, sand: p.sand,
+      cement: p.cement, hin1: p.hin1, hin34: p.hin34, hin38: p.hin38, sand: p.sand, water: p.water,
       namyaKg: p.namya_kg, namyaCc: p.namya_cc,
     })),
   }));
@@ -531,10 +532,10 @@ document.addEventListener('click', async (e) => {
       const sectionId = t.dataset.section;
       const rows = await sbFetch('mix_products', 'POST', {
         section_id: sectionId, name: 'ผลิตภัณฑ์ใหม่', namya_type: 'blue',
-        cement: '0', hin1: '-', hin34: '-', hin38: '0', sand: '0', namya_kg: '0', namya_cc: '0', sort_order: 999,
+        cement: '0', hin1: '-', hin34: '-', hin38: '0', sand: '0', water: '0', namya_kg: '0', namya_cc: '0', sort_order: 999,
       });
       const sec = state.mixSections.find(s => s.id === sectionId);
-      if (sec) sec.products.push({ id: rows[0].id, name: 'ผลิตภัณฑ์ใหม่', namyaType: 'blue', cement: '0', hin1: '-', hin34: '-', hin38: '0', sand: '0', namyaKg: '0', namyaCc: '0' });
+      if (sec) sec.products.push({ id: rows[0].id, name: 'ผลิตภัณฑ์ใหม่', namyaType: 'blue', cement: '0', hin1: '-', hin34: '-', hin38: '0', sand: '0', water: '0', namyaKg: '0', namyaCc: '0' });
 
       // เพิ่มคอลัมน์ในสูตรฐาน ต้องเพิ่มคอลัมน์คู่กันใน section ที่มีตัวคูณด้วย ให้จำนวนคอลัมน์ตรงกัน
       if (sec === state.mixSections[0]) {
@@ -543,9 +544,9 @@ document.addEventListener('click', async (e) => {
           if (derivedSec.multiplier == null) continue;
           const newRows = await sbFetch('mix_products', 'POST', {
             section_id: derivedSec.id, name: 'ผลิตภัณฑ์ใหม่', namya_type: 'blue',
-            cement: '0', hin1: '-', hin34: '-', hin38: '0', sand: '0', namya_kg: '0', namya_cc: '0', sort_order: 999,
+            cement: '0', hin1: '-', hin34: '-', hin38: '0', sand: '0', water: '0', namya_kg: '0', namya_cc: '0', sort_order: 999,
           });
-          derivedSec.products.push({ id: newRows[0].id, name: '', namyaType: 'blue', cement: '0', hin1: '-', hin34: '-', hin38: '0', sand: '0', namyaKg: '0', namyaCc: '0' });
+          derivedSec.products.push({ id: newRows[0].id, name: '', namyaType: 'blue', cement: '0', hin1: '-', hin34: '-', hin38: '0', sand: '0', water: '0', namyaKg: '0', namyaCc: '0' });
         }
         let patches = [];
         for (let i = 1; i < state.mixSections.length; i++) patches = patches.concat(recomputeDerivedSection(i));
