@@ -292,9 +292,10 @@ function parseThaiShortDate(s) {
 }
 
 function addDays(dateStr, days) {
-  const d = new Date(dateStr + 'T00:00:00');
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
 }
 
 // ตารางบันทึก QC รายวัน 3 บล็อก (แผ่นพื้น/หกเหลี่ยม, I-22,26, I-18,S-18) หัวตาราง 2 แถว มี "(PCE)"
