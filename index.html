@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ร่วมมิตรคอนกรีต(นครชัยศรี) - คุณภาพผลิตภัณฑ์</title>
+<title>ร่วมมิตรคอนกรีต(นครชัยศรี) - สูตรคอนกรีต</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -168,7 +168,7 @@ function computeDerivedValue(key, baseValue, multiplier) {
 }
 
 const TABS = [
-  { id: 'quality', label: 'คุณภาพผลิตภัณฑ์' },
+  { id: 'quality', label: 'สูตรคอนกรีต' },
   { id: 'pilespec', label: 'Spec ผลิตภัณฑ์' },
   { id: 'stock', label: 'Stock วัตถุดิบผลิตภัณฑ์' },
   { id: 'warehouse', label: 'คลังสินค้าผลิตภัณฑ์' },
@@ -327,7 +327,7 @@ function renderConcreteTab() {
   const term = (state.search || '').trim().toLowerCase();
   let html = `<div class="card">
     <div class="card-head">
-      <h2>คุณภาพผลิตภัณฑ์</h2>
+      <h2>สูตรคอนกรีต</h2>
       <input class="search-box" placeholder="ค้นหาผลิตภัณฑ์..." id="concreteSearch" value="${esc(state.search)}" />
     </div>`;
   const baseSection = state.mixSections[0];
