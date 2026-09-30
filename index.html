@@ -189,7 +189,7 @@ function buildMixSectionHtml(section, term, baseSection) {
 
   let headerCell;
   if (isDerivedSection) {
-    headerCell = `<th class="section-name"><input type="number" step="0.01" class="multiplier-input" value="${esc(section.multiplier)}" data-action="section-multiplier" data-section="${section.id}" /> คิว</th>`;
+    headerCell = `<th class="section-name"><input type="number" step="0.01" class="multiplier-input" value="${esc(section.multiplier)}" data-action="section-multiplier" data-section="${section.id}" /> ${esc(section.name)}</th>`;
   } else {
     headerCell = `<th class="section-name">${esc(section.name)}</th>`;
   }
