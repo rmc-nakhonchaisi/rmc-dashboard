@@ -285,9 +285,8 @@ function computeStrengthBuckets(rows, group) {
 
 function buildStrengthChartSvg(points) {
   if (!points.length) return '<div style="padding:30px 0; text-align:center; color:var(--muted);">ไม่มีข้อมูล</div>';
-  const spacing = 68;
-  const padL = 46, padR = 60, padT = 30, padB = 46;
-  const chartW = Math.max(560, points.length * spacing);
+  const padL = 46, padR = 44, padT = 30, padB = 46;
+  const chartW = 1400;
   const chartH = 260;
   const width = chartW + padL + padR;
   const height = chartH + padT + padB;
@@ -298,10 +297,10 @@ function buildStrengthChartSvg(points) {
   let yMin = Math.floor(Math.min(...values, overallAvg) / 50) * 50 - 50;
   if (yMin < 0) yMin = 0;
 
-  const xAt = i => padL + i * spacing + spacing / 2;
+  const xAt = i => padL + (i + 0.5) * (chartW / points.length);
   const yAt = v => padT + (yMax - v) / (yMax - yMin) * chartH;
 
-  let svg = `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" style="max-width:none;">`;
+  let svg = `<svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; display:block;">`;
 
   // grid lines + y labels
   const gridStep = 50;
@@ -348,7 +347,7 @@ function renderStrengthChartCard() {
       <button data-action="strength-group" data-group="" class="${!state.strengthGroup ? 'active' : ''}">ทั้งหมด</button>
       ${groups.map(g => `<button data-action="strength-group" data-group="${esc(g)}" class="${state.strengthGroup === g ? 'active' : ''}">${esc(g)}</button>`).join('')}
     </div>
-    <div style="overflow-x:auto;">${buildStrengthChartSvg(buckets)}</div>
+    ${buildStrengthChartSvg(buckets)}
   </div>`;
   return html;
 }
@@ -439,8 +438,7 @@ function buildMixSectionHtml(section, term, baseSection, sectionIdx) {
 
 function renderConcreteTab() {
   const term = (state.search || '').trim().toLowerCase();
-  let html = renderStrengthChartCard();
-  html += `<div class="card">
+  let html = `<div class="card">
     <div class="card-head">
       <h2>สูตรคอนกรีต</h2>
       <input class="search-box" placeholder="ค้นหาผลิตภัณฑ์..." id="concreteSearch" value="${esc(state.search)}" />
@@ -460,6 +458,7 @@ function renderConcreteTab() {
   </div>
   <div class="hint-note">* คลิกที่ค่าตัวเลขหรือชื่อผลิตภัณฑ์เพื่อแก้ไข — สามารถเลือกได้เปลี่ยนได้</div>
   </div>`;
+  html += renderStrengthChartCard();
   document.getElementById('tabContent').innerHTML = html;
 }
 
