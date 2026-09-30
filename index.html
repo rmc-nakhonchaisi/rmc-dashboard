@@ -363,7 +363,7 @@ function renderPileSpecTab() {
     <div class="pile-scroll"><table class="plain-table pile-table">
       <thead><tr>
         <th>รุ่นเสาเข็ม</th><th>ขนาดหน้าตัด</th><th>ความยาวมาตรฐาน</th><th>น้ำหนักโดยประมาณ</th>
-        <th>กำลังรับน้ำหนักปลอดภัย</th><th>เหล็กเสริมหลัก</th><th>เหล็กปลอกเกลียว</th><th></th>
+        <th>กำลังรับน้ำหนักปลอดภัย</th><th>เหล็กเสริมหลัก</th><th></th>
       </tr></thead>
       <tbody>`;
   rows.forEach(r => {
@@ -374,7 +374,6 @@ function renderPileSpecTab() {
       <td><input value="${esc(r.weightPerM)}" data-action="pile-field" data-id="${r.id}" data-key="weightPerM" /></td>
       <td><input value="${esc(r.capacity)}" data-action="pile-field" data-id="${r.id}" data-key="capacity" /></td>
       <td><input value="${esc(r.mainRebar)}" data-action="pile-field" data-id="${r.id}" data-key="mainRebar" /></td>
-      <td><input value="${esc(r.spiral)}" data-action="pile-field" data-id="${r.id}" data-key="spiral" /></td>
       <td style="text-align:center;"><span class="link-remove" data-action="pile-remove" data-id="${r.id}">&times;</span></td>
     </tr>`;
   });
