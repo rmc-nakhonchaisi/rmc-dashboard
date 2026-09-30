@@ -67,9 +67,7 @@
   .cell-select { border:none; background:transparent; text-align:center; font-size:12px; width:100%; }
   .cell-computed { display:block; text-align:center; font-size:13px; color:#374151; cursor:default; }
   .multiplier-input { width:52px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.45); border-radius:4px; color:#fff; text-align:center; font-size:14px; padding:2px 4px; }
-  .group-picker { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
-  .group-picker label { font-size:13px; font-weight:600; color:#374151; }
-  .group-select { border:1px solid #d1d5db; border-radius:6px; padding:7px 12px; font-size:13px; background:#fff; color:var(--ink); min-width:200px; }
+  .variant-select { width:100%; border:1px solid #d1d5db; border-radius:4px; padding:3px 2px; font-size:11px; background:#fff; color:var(--ink); }
 
   .legend-row { display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start; margin-bottom:16px; font-size:13px; }
   .legend-group { display:flex; align-items:center; gap:8px; }
@@ -137,7 +135,9 @@ const ROW_DEFS = [
 const PRODUCT_FIELD_MAP = {
   name: 'name', namyaType: 'namya_type', cement: 'cement', hin1: 'hin1',
   hin34: 'hin34', hin38: 'hin38', sand: 'sand', water: 'water', namyaKg: 'namya_kg', namyaCc: 'namya_cc',
+  sourceProductId: 'source_product_id',
 };
+const PICKER_SECTION_IDX = 2; // section ที่ 3 ("สูตรใช้ปัจจุบัน") — 1 คอลัมน์ต่อ 1 กลุ่มสินค้า เลือกสูตรตัวแทนได้
 // ฟิลด์ตัวเลขที่คำนวณอัตโนมัติ = ตัวคูณของ section × ค่าช่องเดียวกันใน "สูตร 1 คิว" (section แรก)
 const COMPUTED_FIELDS = ['cement', 'hin1', 'hin34', 'hin38', 'sand', 'water', 'namyaKg', 'namyaCc'];
 const ROUND_DECIMALS = { cement: 0, hin1: 0, hin34: 0, hin38: 0, sand: 0, water: 0, namyaKg: 1, namyaCc: 0 };
@@ -155,7 +155,6 @@ function computeDerivedValue(key, baseValue, multiplier) {
 let state = {
   search: '',
   mixSections: [],
-  table3Group: '', // '' = แสดงทุกสูตร, มีค่า = กรองเฉพาะกลุ่มนี้ (เฉพาะตารางที่ 3)
 };
 
 function stripGroupPrefix(name) {
@@ -195,7 +194,7 @@ async function getDashboardData() {
     products: products.filter(p => p.section_id === s.id).map(p => ({
       id: p.id, name: p.name, namyaType: p.namya_type,
       cement: p.cement, hin1: p.hin1, hin34: p.hin34, hin38: p.hin38, sand: p.sand, water: p.water,
-      namyaKg: p.namya_kg, namyaCc: p.namya_cc,
+      namyaKg: p.namya_kg, namyaCc: p.namya_cc, sourceProductId: p.source_product_id,
     })),
   }));
 
@@ -204,28 +203,13 @@ async function getDashboardData() {
 
 // ---------- Concrete formula tab ----------
 function buildMixSectionHtml(section, term, baseSection, sectionIdx) {
-  const isGroupFilterable = sectionIdx === 2; // เฉพาะตารางที่ 3 เท่านั้นที่กรองทีละสูตรได้
-  const groups = isGroupFilterable ? computeGroups() : [];
-  const allowedIdx = (isGroupFilterable && state.table3Group)
-    ? new Set((groups.find(g => g.key === state.table3Group) || {}).indexes || [])
-    : null;
+  const isPickerSection = sectionIdx === PICKER_SECTION_IDX;
+  const groups = isPickerSection ? computeGroups() : [];
 
   const indexed = section.products
     .map((p, idx) => ({ p, idx }))
-    .filter(({ p }) => !term || p.name.toLowerCase().includes(term))
-    .filter(({ idx }) => !allowedIdx || allowedIdx.has(idx));
+    .filter(({ p }) => !term || p.name.toLowerCase().includes(term));
   const isDerivedSection = section.multiplier != null;
-
-  let groupPicker = '';
-  if (isGroupFilterable) {
-    groupPicker = `<div class="group-picker">
-      <label for="table3GroupSelect">เลือกสูตร:</label>
-      <select id="table3GroupSelect" class="group-select" data-action="table3-group">
-        <option value="">ทั้งหมด</option>
-        ${groups.map(g => `<option value="${esc(g.key)}" ${g.key === state.table3Group ? 'selected' : ''}>${esc(g.key)}</option>`).join('')}
-      </select>
-    </div>`;
-  }
 
   let headerCell;
   if (isDerivedSection) {
@@ -234,8 +218,19 @@ function buildMixSectionHtml(section, term, baseSection, sectionIdx) {
     headerCell = `<th class="section-name">${esc(section.name)}</th>`;
   }
 
-  let html = `<div class="mix-scroll">${groupPicker}<table class="mix-table"><thead><tr>${headerCell}`;
+  let html = `<div class="mix-scroll"><table class="mix-table"><thead><tr>${headerCell}`;
   indexed.forEach(({ p, idx }) => {
+    if (isPickerSection) {
+      const group = groups.find(g => g.key === p.name);
+      const variants = group ? group.indexes.map(i => baseSection.products[i]) : [];
+      html += `<th class="product-col"><div class="product-col-inner" style="flex-direction:column; gap:4px;">
+        <span class="product-name-input" style="cursor:default; font-weight:700;">${esc(p.name)}</span>
+        <select class="variant-select" data-action="picker-variant" data-product="${p.id}">
+          ${variants.map(v => `<option value="${v.id}" ${v.id === p.sourceProductId ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}
+        </select>
+      </div></th>`;
+      return;
+    }
     const isNameLinked = isDerivedSection && baseSection && baseSection.products[idx];
     const nameField = isNameLinked
       ? `<span class="product-name-input" style="cursor:default;" title="ชื่อตามสูตร 1 คิว">${esc(p.name)}</span>`
@@ -250,13 +245,19 @@ function buildMixSectionHtml(section, term, baseSection, sectionIdx) {
       ${removeBtn}
     </div></th>`;
   });
-  const addColCell = isDerivedSection ? '' : `<th class="add-col"><button class="btn-add-col" data-action="product-add" data-section="${section.id}">+</button></th>`;
+  const addColCell = (isDerivedSection || isPickerSection) ? '' : `<th class="add-col"><button class="btn-add-col" data-action="product-add" data-section="${section.id}">+</button></th>`;
   html += `${addColCell}</tr></thead><tbody>`;
 
   ROW_DEFS.forEach(rd => {
     html += `<tr><td class="row-label">${esc(rd.label)} <span class="unit">${esc(rd.unit)}</span></td>`;
     indexed.forEach(({ p, idx }) => {
       const isSelect = !!rd.isSelect;
+      if (isPickerSection) {
+        const bg = rd.colored || isSelect ? NAMYA_COLORS[p.namyaType] : '#fff';
+        const text = isSelect ? NAMYA_LABELS[p.namyaType] : p[rd.key];
+        html += `<td class="cell" style="background:${bg};"><span class="cell-computed" title="คำนวณจากสูตรที่เลือก × ตัวคูณ">${esc(text)}</span></td>`;
+        return;
+      }
       const isTypeLinked = isSelect && isDerivedSection && baseSection && baseSection.products[idx];
       const isComputed = isDerivedSection && !isSelect && COMPUTED_FIELDS.includes(rd.key) && baseSection && baseSection.products[idx];
       const bg = rd.colored ? NAMYA_COLORS[p.namyaType] : (isSelect ? NAMYA_COLORS[p.namyaType] : '#fff');
@@ -276,7 +277,7 @@ function buildMixSectionHtml(section, term, baseSection, sectionIdx) {
       }
       html += `</td>`;
     });
-    if (!isDerivedSection) html += `<td class="add-col-cell"></td>`;
+    if (!isDerivedSection && !isPickerSection) html += `<td class="add-col-cell"></td>`;
     html += `</tr>`;
   });
 
@@ -342,6 +343,38 @@ function recomputeDerivedSection(sectionIdx) {
   return patches;
 }
 
+// คำนวณค่าของ section เลือกสูตร ("สูตรใช้ปัจจุบัน") 1 คอลัมน์ต่อ 1 กลุ่ม
+// จากผลิตภัณฑ์ต้นทางที่เลือกไว้ (sourceProductId) ใน "สูตร 1 คิว"
+function recomputePickerSection(sectionIdx) {
+  const section = state.mixSections[sectionIdx];
+  const base = state.mixSections[0];
+  if (!section || !base) return [];
+  const groups = computeGroups();
+  const patches = [];
+  section.products.forEach(p => {
+    const group = groups.find(g => g.key === p.name);
+    let src = base.products.find(bp => bp.id === p.sourceProductId);
+    if (!src || (group && !group.indexes.some(i => base.products[i].id === src.id))) {
+      src = group ? base.products[group.indexes[0]] : base.products[0];
+    }
+    if (!src) return;
+    const patch = {};
+    if (p.sourceProductId !== src.id) { p.sourceProductId = src.id; patch.source_product_id = src.id; }
+    if (p.namyaType !== src.namyaType) { p.namyaType = src.namyaType; patch.namya_type = src.namyaType; }
+    COMPUTED_FIELDS.forEach(key => {
+      const newVal = computeDerivedValue(key, src[key], section.multiplier);
+      p[key] = newVal;
+      patch[PRODUCT_FIELD_MAP[key]] = newVal;
+    });
+    patches.push({ id: p.id, patch });
+  });
+  return patches;
+}
+
+function recomputeSection(sectionIdx) {
+  return sectionIdx === PICKER_SECTION_IDX ? recomputePickerSection(sectionIdx) : recomputeDerivedSection(sectionIdx);
+}
+
 async function persistPatches(patches) {
   await Promise.all(patches.map(({ id, patch }) => sbFetch(`mix_products?id=eq.${id}`, 'PATCH', patch)));
 }
@@ -363,8 +396,10 @@ document.addEventListener('click', async (e) => {
       await sbFetch(`mix_products?id=eq.${pid}`, 'DELETE');
 
       // ลบคอลัมน์ในสูตรฐาน ต้องลบคอลัมน์คู่กัน (ตำแหน่งเดียวกัน) ใน section ที่มีตัวคูณด้วย ให้จำนวนคอลัมน์ตรงกัน
+      // (ยกเว้น section เลือกสูตร ซึ่งมีจำนวนคอลัมน์คงที่ตามจำนวนกลุ่ม ไม่ต้องลบตาม)
       if (isBaseRemoval) {
         for (let i = 1; i < state.mixSections.length; i++) {
+          if (i === PICKER_SECTION_IDX) continue;
           const derivedSec = state.mixSections[i];
           if (derivedSec.multiplier == null) continue;
           if (baseIdx < derivedSec.products.length) {
@@ -373,7 +408,7 @@ document.addEventListener('click', async (e) => {
           }
         }
         let patches = [];
-        for (let i = 1; i < state.mixSections.length; i++) patches = patches.concat(recomputeDerivedSection(i));
+        for (let i = 1; i < state.mixSections.length; i++) patches = patches.concat(recomputeSection(i));
         if (patches.length) await persistPatches(patches);
       }
       renderConcreteTab();
@@ -390,7 +425,7 @@ document.addEventListener('click', async (e) => {
 
           let derivedPatches = [];
           if (sec === state.mixSections[0]) {
-            for (let i = 1; i < state.mixSections.length; i++) derivedPatches = derivedPatches.concat(recomputeDerivedSection(i));
+            for (let i = 1; i < state.mixSections.length; i++) derivedPatches = derivedPatches.concat(recomputeSection(i));
           }
           renderConcreteTab();
           await persistPatches(patches);
@@ -408,8 +443,10 @@ document.addEventListener('click', async (e) => {
       if (sec) sec.products.push({ id: rows[0].id, name: 'ผลิตภัณฑ์ใหม่', namyaType: 'blue', cement: '0', hin1: '-', hin34: '-', hin38: '0', sand: '0', water: '0', namyaKg: '0', namyaCc: '0' });
 
       // เพิ่มคอลัมน์ในสูตรฐาน ต้องเพิ่มคอลัมน์คู่กันใน section ที่มีตัวคูณด้วย ให้จำนวนคอลัมน์ตรงกัน
+      // (ยกเว้น section เลือกสูตร ซึ่งมีจำนวนคอลัมน์คงที่ตามจำนวนกลุ่ม ไม่ต้องเพิ่มตาม)
       if (sec === state.mixSections[0]) {
         for (let i = 1; i < state.mixSections.length; i++) {
+          if (i === PICKER_SECTION_IDX) continue;
           const derivedSec = state.mixSections[i];
           if (derivedSec.multiplier == null) continue;
           const newRows = await sbFetch('mix_products', 'POST', {
@@ -419,7 +456,7 @@ document.addEventListener('click', async (e) => {
           derivedSec.products.push({ id: newRows[0].id, name: '', namyaType: 'blue', cement: '0', hin1: '-', hin34: '-', hin38: '0', sand: '0', water: '0', namyaKg: '0', namyaCc: '0' });
         }
         let patches = [];
-        for (let i = 1; i < state.mixSections.length; i++) patches = patches.concat(recomputeDerivedSection(i));
+        for (let i = 1; i < state.mixSections.length; i++) patches = patches.concat(recomputeSection(i));
         if (patches.length) await persistPatches(patches);
       }
       renderConcreteTab();
@@ -444,7 +481,7 @@ document.addEventListener('change', async (e) => {
       if (state.mixSections[0] && state.mixSections[0].products.some(pp => pp.id === t.dataset.product)) {
         let patches = [];
         for (let i = 1; i < state.mixSections.length; i++) {
-          patches = patches.concat(recomputeDerivedSection(i));
+          patches = patches.concat(recomputeSection(i));
         }
         if (patches.length) {
           renderConcreteTab();
@@ -462,7 +499,7 @@ document.addEventListener('change', async (e) => {
           state.mixSections[0].products.some(pp => pp.id === t.dataset.product)) {
         let patches = [];
         for (let i = 1; i < state.mixSections.length; i++) {
-          patches = patches.concat(recomputeDerivedSection(i));
+          patches = patches.concat(recomputeSection(i));
         }
         if (patches.length) {
           renderConcreteTab();
@@ -477,7 +514,7 @@ document.addEventListener('change', async (e) => {
       let patches = [];
       if (state.mixSections[0] && state.mixSections[0].products.some(pp => pp.id === t.dataset.product)) {
         for (let i = 1; i < state.mixSections.length; i++) {
-          patches = patches.concat(recomputeDerivedSection(i));
+          patches = patches.concat(recomputeSection(i));
         }
       }
       renderConcreteTab();
@@ -488,14 +525,21 @@ document.addEventListener('change', async (e) => {
       if (sec && !isNaN(val)) {
         sec.multiplier = val;
         const sectionIdx = state.mixSections.indexOf(sec);
-        const patches = recomputeDerivedSection(sectionIdx);
+        const patches = recomputeSection(sectionIdx);
         renderConcreteTab();
         await sbFetch(`mix_sections?id=eq.${sec.id}`, 'PATCH', { multiplier: val });
         await persistPatches(patches);
       }
-    } else if (action === 'table3-group') {
-      state.table3Group = t.value;
-      renderConcreteTab();
+    } else if (action === 'picker-variant') {
+      const productId = t.dataset.product;
+      const sec = state.mixSections[PICKER_SECTION_IDX];
+      const p = sec && sec.products.find(x => x.id === productId);
+      if (p) {
+        p.sourceProductId = t.value;
+        const patches = recomputePickerSection(PICKER_SECTION_IDX);
+        renderConcreteTab();
+        await persistPatches(patches);
+      }
     }
   } catch (err) {
     showError(err.message || String(err));
