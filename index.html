@@ -54,6 +54,9 @@
   .link-remove { cursor:pointer; color:var(--red); font-size:13px; font-weight:700; }
   .link-move { cursor:pointer; color:var(--blue); font-size:14px; font-weight:700; padding:0 2px; user-select:none; }
   .link-move:hover { color:var(--blue-dark); }
+  .group-tabs { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
+  .group-tabs button { border:1px solid #d1d5db; background:#fff; color:var(--ink-soft); border-radius:20px; padding:6px 14px; font-size:13px; cursor:pointer; }
+  .group-tabs button.active { background:var(--blue); border-color:var(--blue); color:#fff; font-weight:600; }
 
   .mix-scroll { margin-bottom:28px; }
   table.mix-table { border-collapse:collapse; width:100%; table-layout:fixed; }
@@ -187,6 +190,8 @@ let state = {
   mixSections: [],
   pileSearch: '',
   pileRows: [],
+  strengthTests: [],
+  strengthGroup: '',
 };
 
 function stripGroupPrefix(name) {
@@ -216,10 +221,11 @@ function showError(msg) {
 
 // ---------- Data loading ----------
 async function getDashboardData() {
-  const [sections, products, pileRows] = await Promise.all([
+  const [sections, products, pileRows, strengthTests] = await Promise.all([
     sbFetch('mix_sections?select=*&order=sort_order.asc'),
     sbFetch('mix_products?select=*&order=sort_order.asc'),
     sbFetch('pile_specs?select=*&order=sort_order.asc'),
+    sbFetch('strength_tests?select=*&age_days=eq.7&order=test_date.asc'),
   ]);
 
   const mixSections = sections.map(s => ({
@@ -237,7 +243,114 @@ async function getDashboardData() {
       id: r.id, name: r.name, section: r.section_size, length: r.standard_length,
       weightPerM: r.weight_per_m, capacity: r.safe_capacity, mainRebar: r.main_rebar, spiral: r.spiral_rebar,
     })),
+    strengthTests: strengthTests.map(r => ({
+      testDate: r.test_date, group: r.product_group, avgKsc: r.avg_ksc,
+    })),
   };
+}
+
+// ---------- Strength chart ----------
+const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
+
+function strengthBucketOf(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  let startDay, endDay;
+  if (d <= 10) { startDay = 1; endDay = 10; }
+  else if (d <= 20) { startDay = 11; endDay = 20; }
+  else { startDay = 21; endDay = daysInMonth(y, m); }
+  return {
+    key: `${y}-${String(m).padStart(2, '0')}-${String(startDay).padStart(2, '0')}`,
+    label: `${startDay}-${endDay} ${THAI_MONTHS[m - 1]}`,
+  };
+}
+
+function computeStrengthBuckets(rows, group) {
+  const filtered = group ? rows.filter(r => r.group === group) : rows;
+  const map = new Map();
+  filtered.forEach(r => {
+    if (r.avgKsc == null) return;
+    const { key, label } = strengthBucketOf(r.testDate);
+    if (!map.has(key)) map.set(key, { label, sum: 0, count: 0 });
+    const b = map.get(key);
+    b.sum += Number(r.avgKsc);
+    b.count += 1;
+  });
+  return [...map.keys()].sort().map(k => {
+    const b = map.get(k);
+    return { label: b.label, avg: b.sum / b.count };
+  });
+}
+
+function buildStrengthChartSvg(points) {
+  if (!points.length) return '<div style="padding:30px 0; text-align:center; color:var(--muted);">ไม่มีข้อมูล</div>';
+  const spacing = 68;
+  const padL = 46, padR = 60, padT = 30, padB = 46;
+  const chartW = Math.max(560, points.length * spacing);
+  const chartH = 260;
+  const width = chartW + padL + padR;
+  const height = chartH + padT + padB;
+
+  const values = points.map(p => p.avg);
+  const overallAvg = values.reduce((a, b) => a + b, 0) / values.length;
+  let yMax = Math.ceil(Math.max(...values, overallAvg) / 50) * 50 + 50;
+  let yMin = Math.floor(Math.min(...values, overallAvg) / 50) * 50 - 50;
+  if (yMin < 0) yMin = 0;
+
+  const xAt = i => padL + i * spacing + spacing / 2;
+  const yAt = v => padT + (yMax - v) / (yMax - yMin) * chartH;
+
+  let svg = `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" style="max-width:none;">`;
+
+  // grid lines + y labels
+  const gridStep = 50;
+  for (let v = Math.ceil(yMin / gridStep) * gridStep; v <= yMax; v += gridStep) {
+    const y = yAt(v);
+    svg += `<line x1="${padL}" y1="${y}" x2="${padL + chartW}" y2="${y}" stroke="#eef1f5" stroke-width="1" />`;
+    svg += `<text x="${padL - 10}" y="${y + 4}" font-size="11" fill="#9ca3af" text-anchor="end">${v}</text>`;
+  }
+
+  // average dashed line
+  const avgY = yAt(overallAvg);
+  svg += `<line x1="${padL}" y1="${avgY}" x2="${padL + chartW}" y2="${avgY}" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="6,4" />`;
+  svg += `<text x="${padL + chartW + 4}" y="${avgY + 4}" font-size="11" fill="#16a34a">ค่าเฉลี่ย ${Math.round(overallAvg)}</text>`;
+
+  // line path
+  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xAt(i)} ${yAt(p.avg)}`).join(' ');
+  svg += `<path d="${linePath}" fill="none" stroke="#2563eb" stroke-width="2" />`;
+
+  // points + value labels
+  points.forEach((p, i) => {
+    const x = xAt(i), y = yAt(p.avg);
+    svg += `<circle cx="${x}" cy="${y}" r="4" fill="#fff" stroke="#2563eb" stroke-width="2" />`;
+    svg += `<text x="${x}" y="${y - 10}" font-size="11" fill="#1f2937" text-anchor="middle" font-weight="600">${Math.round(p.avg)}</text>`;
+  });
+
+  // x-axis labels
+  points.forEach((p, i) => {
+    const parts = p.label.split(' ');
+    svg += `<text x="${xAt(i)}" y="${padT + chartH + 18}" font-size="11" fill="#6b7280" text-anchor="middle">${esc(parts[0])}</text>`;
+    svg += `<text x="${xAt(i)}" y="${padT + chartH + 32}" font-size="11" fill="#6b7280" text-anchor="middle">${esc(parts[1] || '')}</text>`;
+  });
+
+  svg += `</svg>`;
+  return svg;
+}
+
+function renderStrengthChartCard() {
+  const groups = [...new Set(state.strengthTests.map(r => r.group))].filter(Boolean);
+  const buckets = computeStrengthBuckets(state.strengthTests, state.strengthGroup);
+  let html = `<div class="card" style="margin-bottom:20px;">
+    <div class="card-head"><h2>Strength ทุก 10 วัน</h2></div>
+    <div class="hint-note" style="margin-bottom:10px;">หน่วย: ksc • เฉพาะอายุ 7 วัน</div>
+    <div class="group-tabs">
+      <button data-action="strength-group" data-group="" class="${!state.strengthGroup ? 'active' : ''}">ทั้งหมด</button>
+      ${groups.map(g => `<button data-action="strength-group" data-group="${esc(g)}" class="${state.strengthGroup === g ? 'active' : ''}">${esc(g)}</button>`).join('')}
+    </div>
+    <div style="overflow-x:auto;">${buildStrengthChartSvg(buckets)}</div>
+  </div>`;
+  return html;
 }
 
 // ---------- Concrete formula tab ----------
@@ -326,7 +439,8 @@ function buildMixSectionHtml(section, term, baseSection, sectionIdx) {
 
 function renderConcreteTab() {
   const term = (state.search || '').trim().toLowerCase();
-  let html = `<div class="card">
+  let html = renderStrengthChartCard();
+  html += `<div class="card">
     <div class="card-head">
       <h2>สูตรคอนกรีต</h2>
       <input class="search-box" placeholder="ค้นหาผลิตภัณฑ์..." id="concreteSearch" value="${esc(state.search)}" />
@@ -484,6 +598,9 @@ document.addEventListener('click', async (e) => {
     if (action === 'set-tab') {
       state.activeTab = t.dataset.tab;
       render();
+    } else if (action === 'strength-group') {
+      state.strengthGroup = t.dataset.group;
+      renderConcreteTab();
     } else if (action === 'pile-add') {
       t.disabled = true;
       const rows = await sbFetch('pile_specs', 'POST', {
@@ -683,6 +800,7 @@ document.addEventListener('keydown', (e) => {
     const data = await getDashboardData();
     state.mixSections = data.mixSections;
     state.pileRows = data.pileRows;
+    state.strengthTests = data.strengthTests;
     render();
     document.getElementById('loadingOverlay').style.display = 'none';
   } catch (err) {
