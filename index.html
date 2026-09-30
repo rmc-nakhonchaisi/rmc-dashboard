@@ -173,6 +173,7 @@ const TABS = [
   { id: 'stock', label: 'Stock วัตถุดิบผลิตภัณฑ์' },
   { id: 'warehouse', label: 'คลังสินค้าผลิตภัณฑ์' },
   { id: 'qc', label: 'ตรวจสอบ QC' },
+  { id: 'pm', label: 'รอบงานประจำ(PM)' },
 ];
 
 const PILE_FIELD_MAP = {
@@ -373,6 +374,14 @@ function renderWarehouseTab() {
   document.getElementById('tabContent').innerHTML = html;
 }
 
+function renderPmTab() {
+  const html = `<div class="card">
+    <div class="card-head"><h2>รอบงานประจำ(PM)</h2></div>
+    <div style="padding:40px 0; text-align:center; color:var(--muted);">ยังไม่มีข้อมูลในแท็บนี้</div>
+  </div>`;
+  document.getElementById('tabContent').innerHTML = html;
+}
+
 function renderQcTab() {
   const html = `<div class="card">
     <div class="card-head"><h2>ตรวจสอบ QC</h2></div>
@@ -393,6 +402,7 @@ function render() {
   else if (state.activeTab === 'stock') renderStockTab();
   else if (state.activeTab === 'warehouse') renderWarehouseTab();
   else if (state.activeTab === 'qc') renderQcTab();
+  else if (state.activeTab === 'pm') renderPmTab();
   else renderConcreteTab();
 }
 
