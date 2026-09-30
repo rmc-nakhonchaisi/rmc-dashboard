@@ -67,8 +67,9 @@
   .cell-select { border:none; background:transparent; text-align:center; font-size:12px; width:100%; }
   .cell-computed { display:block; text-align:center; font-size:13px; color:#374151; cursor:default; }
   .multiplier-input { width:52px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.45); border-radius:4px; color:#fff; text-align:center; font-size:14px; padding:2px 4px; }
-  .group-select-inline { display:block; margin-top:4px; width:100%; max-width:130px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.45); border-radius:4px; color:#fff; font-size:11px; padding:2px 2px; }
-  .group-select-inline option { color:#1f2937; }
+  .group-picker { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .group-picker label { font-size:13px; font-weight:600; color:#374151; }
+  .group-select { border:1px solid #d1d5db; border-radius:6px; padding:7px 12px; font-size:13px; background:#fff; color:var(--ink); min-width:200px; }
 
   .legend-row { display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start; margin-bottom:16px; font-size:13px; }
   .legend-group { display:flex; align-items:center; gap:8px; }
@@ -215,22 +216,25 @@ function buildMixSectionHtml(section, term, baseSection, sectionIdx) {
     .filter(({ idx }) => !allowedIdx || allowedIdx.has(idx));
   const isDerivedSection = section.multiplier != null;
 
-  let groupSelect = '';
+  let groupPicker = '';
   if (isGroupFilterable) {
-    groupSelect = `<select class="group-select-inline" data-action="table3-group">
-      <option value="">ทั้งหมด</option>
-      ${groups.map(g => `<option value="${esc(g.key)}" ${g.key === state.table3Group ? 'selected' : ''}>${esc(g.key)}</option>`).join('')}
-    </select>`;
+    groupPicker = `<div class="group-picker">
+      <label for="table3GroupSelect">เลือกสูตร:</label>
+      <select id="table3GroupSelect" class="group-select" data-action="table3-group">
+        <option value="">ทั้งหมด</option>
+        ${groups.map(g => `<option value="${esc(g.key)}" ${g.key === state.table3Group ? 'selected' : ''}>${esc(g.key)}</option>`).join('')}
+      </select>
+    </div>`;
   }
 
   let headerCell;
   if (isDerivedSection) {
-    headerCell = `<th class="section-name"><input type="number" step="0.01" class="multiplier-input" value="${esc(section.multiplier)}" data-action="section-multiplier" data-section="${section.id}" /> ${esc(section.name)} ${groupSelect}</th>`;
+    headerCell = `<th class="section-name"><input type="number" step="0.01" class="multiplier-input" value="${esc(section.multiplier)}" data-action="section-multiplier" data-section="${section.id}" /> ${esc(section.name)}</th>`;
   } else {
-    headerCell = `<th class="section-name">${esc(section.name)} ${groupSelect}</th>`;
+    headerCell = `<th class="section-name">${esc(section.name)}</th>`;
   }
 
-  let html = `<div class="mix-scroll"><table class="mix-table"><thead><tr>${headerCell}`;
+  let html = `<div class="mix-scroll">${groupPicker}<table class="mix-table"><thead><tr>${headerCell}`;
   indexed.forEach(({ p, idx }) => {
     const isNameLinked = isDerivedSection && baseSection && baseSection.products[idx];
     const nameField = isNameLinked
