@@ -67,6 +67,8 @@
   .cell-select { border:none; background:transparent; text-align:center; font-size:12px; width:100%; }
   .cell-computed { display:block; text-align:center; font-size:13px; color:#374151; cursor:default; }
   .multiplier-input { width:52px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.45); border-radius:4px; color:#fff; text-align:center; font-size:14px; padding:2px 4px; }
+  .group-select-inline { display:block; margin-top:4px; width:100%; max-width:130px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.45); border-radius:4px; color:#fff; font-size:11px; padding:2px 2px; }
+  .group-select-inline option { color:#1f2937; }
 
   .legend-row { display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start; margin-bottom:16px; font-size:13px; }
   .legend-group { display:flex; align-items:center; gap:8px; }
@@ -152,7 +154,26 @@ function computeDerivedValue(key, baseValue, multiplier) {
 let state = {
   search: '',
   mixSections: [],
+  table3Group: '', // '' = แสดงทุกสูตร, มีค่า = กรองเฉพาะกลุ่มนี้ (เฉพาะตารางที่ 3)
 };
+
+function stripGroupPrefix(name) {
+  return String(name || '').replace(/^\(\d+\)\s*/, '').trim();
+}
+
+// จัดกลุ่มคอลัมน์ของ "สูตร 1 คิว" ตามชื่อ (ตัด "(n)" นำหน้าออก) — ใช้กรองเฉพาะตารางที่ 3
+function computeGroups() {
+  const base = state.mixSections[0];
+  if (!base) return [];
+  const order = [];
+  const map = new Map();
+  base.products.forEach((p, idx) => {
+    const key = stripGroupPrefix(p.name) || p.name || '(ไม่มีชื่อ)';
+    if (!map.has(key)) { map.set(key, []); order.push(key); }
+    map.get(key).push(idx);
+  });
+  return order.map(key => ({ key, indexes: map.get(key) }));
+}
 
 function esc(v) {
   return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -181,17 +202,32 @@ async function getDashboardData() {
 }
 
 // ---------- Concrete formula tab ----------
-function buildMixSectionHtml(section, term, baseSection) {
+function buildMixSectionHtml(section, term, baseSection, sectionIdx) {
+  const isGroupFilterable = sectionIdx === 2; // เฉพาะตารางที่ 3 เท่านั้นที่กรองทีละสูตรได้
+  const groups = isGroupFilterable ? computeGroups() : [];
+  const allowedIdx = (isGroupFilterable && state.table3Group)
+    ? new Set((groups.find(g => g.key === state.table3Group) || {}).indexes || [])
+    : null;
+
   const indexed = section.products
     .map((p, idx) => ({ p, idx }))
-    .filter(({ p }) => !term || p.name.toLowerCase().includes(term));
+    .filter(({ p }) => !term || p.name.toLowerCase().includes(term))
+    .filter(({ idx }) => !allowedIdx || allowedIdx.has(idx));
   const isDerivedSection = section.multiplier != null;
+
+  let groupSelect = '';
+  if (isGroupFilterable) {
+    groupSelect = `<select class="group-select-inline" data-action="table3-group">
+      <option value="">ทั้งหมด</option>
+      ${groups.map(g => `<option value="${esc(g.key)}" ${g.key === state.table3Group ? 'selected' : ''}>${esc(g.key)}</option>`).join('')}
+    </select>`;
+  }
 
   let headerCell;
   if (isDerivedSection) {
-    headerCell = `<th class="section-name"><input type="number" step="0.01" class="multiplier-input" value="${esc(section.multiplier)}" data-action="section-multiplier" data-section="${section.id}" /> ${esc(section.name)}</th>`;
+    headerCell = `<th class="section-name"><input type="number" step="0.01" class="multiplier-input" value="${esc(section.multiplier)}" data-action="section-multiplier" data-section="${section.id}" /> ${esc(section.name)} ${groupSelect}</th>`;
   } else {
-    headerCell = `<th class="section-name">${esc(section.name)}</th>`;
+    headerCell = `<th class="section-name">${esc(section.name)} ${groupSelect}</th>`;
   }
 
   let html = `<div class="mix-scroll"><table class="mix-table"><thead><tr>${headerCell}`;
@@ -252,7 +288,7 @@ function renderConcreteTab() {
       <input class="search-box" placeholder="ค้นหาผลิตภัณฑ์..." id="concreteSearch" value="${esc(state.search)}" />
     </div>`;
   const baseSection = state.mixSections[0];
-  state.mixSections.forEach(sec => { html += buildMixSectionHtml(sec, term, baseSection); });
+  state.mixSections.forEach((sec, idx) => { html += buildMixSectionHtml(sec, term, baseSection, idx); });
   html += `<div class="legend-row">
     <div class="legend-group">
       <span class="legend-label">ถพ.น้ำยา 1.08</span>
@@ -453,6 +489,9 @@ document.addEventListener('change', async (e) => {
         await sbFetch(`mix_sections?id=eq.${sec.id}`, 'PATCH', { multiplier: val });
         await persistPatches(patches);
       }
+    } else if (action === 'table3-group') {
+      state.table3Group = t.value;
+      renderConcreteTab();
     }
   } catch (err) {
     showError(err.message || String(err));
