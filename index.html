@@ -73,6 +73,16 @@
   .multiplier-input { width:52px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.45); border-radius:4px; color:#fff; text-align:center; font-size:14px; padding:2px 4px; }
   .variant-select { width:100%; border:1px solid #d1d5db; border-radius:4px; padding:3px 2px; font-size:11px; background:#fff; color:var(--ink); }
 
+  table.plain-table { width:100%; border-collapse:collapse; }
+  table.plain-table thead tr { background:var(--navy); color:#fff; }
+  table.plain-table thead th { padding:10px; text-align:left; font-weight:400; }
+  table.plain-table tbody tr { border-bottom:1px solid #eef1f5; }
+  table.plain-table tbody td { padding:6px 10px; }
+  table.plain-table tbody td input { border:none; background:transparent; width:100%; }
+  .pile-scroll { overflow-x:auto; }
+  table.pile-table { min-width:900px; }
+  table.pile-table td input.f-name { font-weight:700; }
+
   .legend-row { display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start; margin-bottom:16px; font-size:13px; }
   .legend-group { display:flex; align-items:center; gap:8px; }
   .legend-label { font-weight:600; color:#374151; }
@@ -159,14 +169,22 @@ function computeDerivedValue(key, baseValue, multiplier) {
 
 const TABS = [
   { id: 'quality', label: 'คุณภาพผลิตภัณฑ์' },
+  { id: 'pilespec', label: 'Spec ผลิตภัณฑ์' },
   { id: 'stock', label: 'Stock วัตถุดิบผลิตภัณฑ์' },
   { id: 'qc', label: 'ตรวจสอบ QC' },
 ];
+
+const PILE_FIELD_MAP = {
+  name: 'name', section: 'section_size', length: 'standard_length',
+  weightPerM: 'weight_per_m', capacity: 'safe_capacity', mainRebar: 'main_rebar', spiral: 'spiral_rebar',
+};
 
 let state = {
   activeTab: 'quality',
   search: '',
   mixSections: [],
+  pileSearch: '',
+  pileRows: [],
 };
 
 function stripGroupPrefix(name) {
@@ -196,9 +214,10 @@ function showError(msg) {
 
 // ---------- Data loading ----------
 async function getDashboardData() {
-  const [sections, products] = await Promise.all([
+  const [sections, products, pileRows] = await Promise.all([
     sbFetch('mix_sections?select=*&order=sort_order.asc'),
     sbFetch('mix_products?select=*&order=sort_order.asc'),
+    sbFetch('pile_specs?select=*&order=sort_order.asc'),
   ]);
 
   const mixSections = sections.map(s => ({
@@ -210,7 +229,13 @@ async function getDashboardData() {
     })),
   }));
 
-  return { mixSections };
+  return {
+    mixSections,
+    pileRows: pileRows.map(r => ({
+      id: r.id, name: r.name, section: r.section_size, length: r.standard_length,
+      weightPerM: r.weight_per_m, capacity: r.safe_capacity, mainRebar: r.main_rebar, spiral: r.spiral_rebar,
+    })),
+  };
 }
 
 // ---------- Concrete formula tab ----------
@@ -322,6 +347,40 @@ function renderConcreteTab() {
   document.getElementById('tabContent').innerHTML = html;
 }
 
+// ---------- Pile spec tab ----------
+function renderPileSpecTab() {
+  const term = (state.pileSearch || '').trim().toLowerCase();
+  const rows = state.pileRows.filter(r => !term || r.name.toLowerCase().includes(term) || r.section.toLowerCase().includes(term));
+  let html = `<div class="card">
+    <div class="card-head">
+      <h2>Spec ผลิตภัณฑ์</h2>
+      <div class="head-actions">
+        <input class="search-box" placeholder="ค้นหารุ่น..." id="pileSearch" value="${esc(state.pileSearch)}" style="width:200px;" />
+        <button class="btn-primary" data-action="pile-add">+ เพิ่มรุ่น</button>
+      </div>
+    </div>
+    <div class="pile-scroll"><table class="plain-table pile-table">
+      <thead><tr>
+        <th>รุ่นเสาเข็ม</th><th>ขนาดหน้าตัด</th><th>ความยาวมาตรฐาน</th><th>น้ำหนักโดยประมาณ</th>
+        <th>กำลังรับน้ำหนักปลอดภัย</th><th>เหล็กเสริมหลัก</th><th>เหล็กปลอกเกลียว</th><th></th>
+      </tr></thead>
+      <tbody>`;
+  rows.forEach(r => {
+    html += `<tr>
+      <td><input class="f-name" value="${esc(r.name)}" data-action="pile-field" data-id="${r.id}" data-key="name" /></td>
+      <td><input value="${esc(r.section)}" data-action="pile-field" data-id="${r.id}" data-key="section" /></td>
+      <td><input value="${esc(r.length)}" data-action="pile-field" data-id="${r.id}" data-key="length" /></td>
+      <td><input value="${esc(r.weightPerM)}" data-action="pile-field" data-id="${r.id}" data-key="weightPerM" /></td>
+      <td><input value="${esc(r.capacity)}" data-action="pile-field" data-id="${r.id}" data-key="capacity" /></td>
+      <td><input value="${esc(r.mainRebar)}" data-action="pile-field" data-id="${r.id}" data-key="mainRebar" /></td>
+      <td><input value="${esc(r.spiral)}" data-action="pile-field" data-id="${r.id}" data-key="spiral" /></td>
+      <td style="text-align:center;"><span class="link-remove" data-action="pile-remove" data-id="${r.id}">&times;</span></td>
+    </tr>`;
+  });
+  html += `</tbody></table></div></div>`;
+  document.getElementById('tabContent').innerHTML = html;
+}
+
 function renderStockTab() {
   const html = `<div class="card">
     <div class="card-head"><h2>Stock วัตถุดิบผลิตภัณฑ์</h2></div>
@@ -346,7 +405,8 @@ function renderTabNav() {
 
 function render() {
   renderTabNav();
-  if (state.activeTab === 'stock') renderStockTab();
+  if (state.activeTab === 'pilespec') renderPileSpecTab();
+  else if (state.activeTab === 'stock') renderStockTab();
   else if (state.activeTab === 'qc') renderQcTab();
   else renderConcreteTab();
 }
@@ -358,6 +418,7 @@ function findProduct(productId) {
   }
   return null;
 }
+function findPile(id) { return state.pileRows.find(r => r.id === id) || null; }
 
 // คำนวณค่าตัวเลขทั้งหมดของ section ที่มีตัวคูณ ใหม่จาก "สูตร 1 คิว" (section แรก)
 // อัปเดต state ในตัว และคืนรายการ patch สำหรับบันทึกลง Supabase
@@ -428,6 +489,18 @@ document.addEventListener('click', async (e) => {
     if (action === 'set-tab') {
       state.activeTab = t.dataset.tab;
       render();
+    } else if (action === 'pile-add') {
+      t.disabled = true;
+      const rows = await sbFetch('pile_specs', 'POST', {
+        name: 'ใหม่', section_size: '', standard_length: '', weight_per_m: '', safe_capacity: '', main_rebar: '', spiral_rebar: '', sort_order: 999,
+      });
+      state.pileRows.push({ id: rows[0].id, name: 'ใหม่', section: '', length: '', weightPerM: '', capacity: '', mainRebar: '', spiral: '' });
+      renderPileSpecTab();
+    } else if (action === 'pile-remove') {
+      const id = t.dataset.id;
+      state.pileRows = state.pileRows.filter(r => r.id !== id);
+      renderPileSpecTab();
+      await sbFetch(`pile_specs?id=eq.${id}`, 'DELETE');
     } else if (action === 'product-remove') {
       const pid = t.dataset.product;
       const baseSec = state.mixSections[0];
@@ -582,6 +655,11 @@ document.addEventListener('change', async (e) => {
         renderConcreteTab();
         await persistPatches(patches);
       }
+    } else if (action === 'pile-field') {
+      const r = findPile(t.dataset.id);
+      if (r) r[t.dataset.key] = t.value;
+      const col = PILE_FIELD_MAP[t.dataset.key];
+      await sbFetch(`pile_specs?id=eq.${t.dataset.id}`, 'PATCH', { [col]: t.value });
     }
   } catch (err) {
     showError(err.message || String(err));
@@ -592,6 +670,9 @@ document.addEventListener('input', (e) => {
   if (e.target.id === 'concreteSearch') {
     state.search = e.target.value;
     renderConcreteTab();
+  } else if (e.target.id === 'pileSearch') {
+    state.pileSearch = e.target.value;
+    renderPileSpecTab();
   }
 });
 
@@ -606,6 +687,7 @@ document.addEventListener('keydown', (e) => {
   try {
     const data = await getDashboardData();
     state.mixSections = data.mixSections;
+    state.pileRows = data.pileRows;
     render();
     document.getElementById('loadingOverlay').style.display = 'none';
   } catch (err) {
