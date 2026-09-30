@@ -160,6 +160,7 @@ function computeDerivedValue(key, baseValue, multiplier) {
 const TABS = [
   { id: 'quality', label: 'คุณภาพผลิตภัณฑ์' },
   { id: 'stock', label: 'Stock วัตถุดิบผลิตภัณฑ์' },
+  { id: 'qc', label: 'ตรวจสอบ QC' },
 ];
 
 let state = {
@@ -329,6 +330,14 @@ function renderStockTab() {
   document.getElementById('tabContent').innerHTML = html;
 }
 
+function renderQcTab() {
+  const html = `<div class="card">
+    <div class="card-head"><h2>ตรวจสอบ QC</h2></div>
+    <div style="padding:40px 0; text-align:center; color:var(--muted);">ยังไม่มีข้อมูลในแท็บนี้</div>
+  </div>`;
+  document.getElementById('tabContent').innerHTML = html;
+}
+
 function renderTabNav() {
   document.getElementById('tabnav').innerHTML = TABS.map(t =>
     `<button data-action="set-tab" data-tab="${t.id}" class="${state.activeTab === t.id ? 'active' : ''}">${esc(t.label)}</button>`
@@ -338,6 +347,7 @@ function renderTabNav() {
 function render() {
   renderTabNav();
   if (state.activeTab === 'stock') renderStockTab();
+  else if (state.activeTab === 'qc') renderQcTab();
   else renderConcreteTab();
 }
 
