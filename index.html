@@ -350,34 +350,10 @@ function renderConcreteTab() {
 
 // ---------- Pile spec tab ----------
 function renderPileSpecTab() {
-  const term = (state.pileSearch || '').trim().toLowerCase();
-  const rows = state.pileRows.filter(r => !term || r.name.toLowerCase().includes(term) || r.section.toLowerCase().includes(term));
-  let html = `<div class="card">
-    <div class="card-head">
-      <h2>Spec ผลิตภัณฑ์</h2>
-      <div class="head-actions">
-        <input class="search-box" placeholder="ค้นหารุ่น..." id="pileSearch" value="${esc(state.pileSearch)}" style="width:200px;" />
-        <button class="btn-primary" data-action="pile-add">+ เพิ่มรุ่น</button>
-      </div>
-    </div>
-    <div class="pile-scroll"><table class="plain-table pile-table">
-      <thead><tr>
-        <th>รุ่นเสาเข็ม</th><th>ขนาดหน้าตัด</th><th>ความยาวมาตรฐาน</th><th>น้ำหนักโดยประมาณ</th>
-        <th>กำลังรับน้ำหนักปลอดภัย</th><th>เหล็กเสริมหลัก</th><th></th>
-      </tr></thead>
-      <tbody>`;
-  rows.forEach(r => {
-    html += `<tr>
-      <td><input class="f-name" value="${esc(r.name)}" data-action="pile-field" data-id="${r.id}" data-key="name" /></td>
-      <td><input value="${esc(r.section)}" data-action="pile-field" data-id="${r.id}" data-key="section" /></td>
-      <td><input value="${esc(r.length)}" data-action="pile-field" data-id="${r.id}" data-key="length" /></td>
-      <td><input value="${esc(r.weightPerM)}" data-action="pile-field" data-id="${r.id}" data-key="weightPerM" /></td>
-      <td><input value="${esc(r.capacity)}" data-action="pile-field" data-id="${r.id}" data-key="capacity" /></td>
-      <td><input value="${esc(r.mainRebar)}" data-action="pile-field" data-id="${r.id}" data-key="mainRebar" /></td>
-      <td style="text-align:center;"><span class="link-remove" data-action="pile-remove" data-id="${r.id}">&times;</span></td>
-    </tr>`;
-  });
-  html += `</tbody></table></div></div>`;
+  const html = `<div class="card">
+    <div class="card-head"><h2>Spec ผลิตภัณฑ์</h2></div>
+    <div style="padding:40px 0; text-align:center; color:var(--muted);">ยังไม่มีข้อมูลในแท็บนี้</div>
+  </div>`;
   document.getElementById('tabContent').innerHTML = html;
 }
 
