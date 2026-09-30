@@ -35,6 +35,10 @@
   .company-name { font-size:20px; font-weight:700; color:var(--ink); }
   .company-sub { font-size:15px; font-weight:600; color:var(--blue); margin-top:2px; }
 
+  .tabnav { background:#fff; border-bottom:1px solid var(--border); padding:0 20px; display:flex; flex-wrap:wrap; gap:2px; }
+  .tabnav button { border:none; background:transparent; cursor:pointer; padding:14px; font-size:13px; font-weight:500; color:var(--ink-soft); border-bottom:3px solid transparent; white-space:nowrap; }
+  .tabnav button.active { font-weight:700; color:var(--blue); border-bottom-color:var(--blue); }
+
   .page { padding:24px 28px 60px; }
   .card { background:#fff; border:1px solid var(--border); border-radius:10px; padding:20px 22px; }
   .card-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
@@ -83,6 +87,7 @@
 </head>
 <body>
 
+<div class="tabnav" id="tabnav"></div>
 <div class="page"><div id="tabContent"></div></div>
 
 <div class="loading-overlay" id="loadingOverlay">
@@ -152,7 +157,13 @@ function computeDerivedValue(key, baseValue, multiplier) {
   return result.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
+const TABS = [
+  { id: 'concrete', label: 'สูตรคอนกรีต' },
+  { id: 'quality', label: 'คุณภาพผลิตภัณฑ์' },
+];
+
 let state = {
+  activeTab: 'concrete',
   search: '',
   mixSections: [],
 };
@@ -310,7 +321,25 @@ function renderConcreteTab() {
   document.getElementById('tabContent').innerHTML = html;
 }
 
-function render() { renderConcreteTab(); }
+function renderQualityTab() {
+  const html = `<div class="card">
+    <div class="card-head"><h2>คุณภาพผลิตภัณฑ์</h2></div>
+    <div style="padding:40px 0; text-align:center; color:var(--muted);">ยังไม่มีข้อมูลในแท็บนี้</div>
+  </div>`;
+  document.getElementById('tabContent').innerHTML = html;
+}
+
+function renderTabNav() {
+  document.getElementById('tabnav').innerHTML = TABS.map(t =>
+    `<button data-action="set-tab" data-tab="${t.id}" class="${state.activeTab === t.id ? 'active' : ''}">${esc(t.label)}</button>`
+  ).join('');
+}
+
+function render() {
+  renderTabNav();
+  if (state.activeTab === 'quality') renderQualityTab();
+  else renderConcreteTab();
+}
 
 function findProduct(productId) {
   for (const sec of state.mixSections) {
@@ -386,7 +415,10 @@ document.addEventListener('click', async (e) => {
   const action = t.dataset.action;
 
   try {
-    if (action === 'product-remove') {
+    if (action === 'set-tab') {
+      state.activeTab = t.dataset.tab;
+      render();
+    } else if (action === 'product-remove') {
       const pid = t.dataset.product;
       const baseSec = state.mixSections[0];
       const baseIdx = baseSec ? baseSec.products.findIndex(p => p.id === pid) : -1;
