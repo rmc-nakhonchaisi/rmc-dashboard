@@ -51,14 +51,14 @@
   .link-move { cursor:pointer; color:var(--blue); font-size:14px; font-weight:700; padding:0 2px; user-select:none; }
   .link-move:hover { color:var(--blue-dark); }
 
-  .mix-scroll { margin-bottom:28px; overflow-x:auto; }
-  table.mix-table { border-collapse:collapse; min-width:max-content; width:100%; }
-  table.mix-table th, table.mix-table td { border:1px solid var(--table-border); }
-  table.mix-table thead th.section-name { background:var(--navy); color:#fff; padding:10px 14px; text-align:left; min-width:180px; font-weight:400; }
-  table.mix-table thead th.product-col { background:#eef2f7; padding:8px; text-align:center; min-width:110px; }
-  table.mix-table thead th.add-col { background:#eef2f7; min-width:44px; text-align:center; }
+  .mix-scroll { margin-bottom:28px; }
+  table.mix-table { border-collapse:collapse; width:100%; table-layout:fixed; }
+  table.mix-table th, table.mix-table td { border:1px solid var(--table-border); overflow-wrap:break-word; }
+  table.mix-table thead th.section-name { background:var(--navy); color:#fff; padding:10px 8px; text-align:left; font-weight:400; width:110px; }
+  table.mix-table thead th.product-col { background:#eef2f7; padding:6px 4px; text-align:center; }
+  table.mix-table thead th.add-col { background:#eef2f7; width:30px; text-align:center; }
   .product-col-inner { display:flex; align-items:center; gap:4px; justify-content:center; }
-  .product-name-input { border:none; background:transparent; text-align:center; font-weight:700; font-size:12px; width:90px; color:var(--ink); }
+  .product-name-input { border:none; background:transparent; text-align:center; font-weight:700; font-size:11px; width:100%; min-width:0; color:var(--ink); }
   table.mix-table tbody td.row-label { padding:8px 14px; font-weight:700; color:#374151; background:#fafbfc; }
   table.mix-table tbody td.row-label .unit { font-weight:400; color:#9ca3af; font-size:11px; }
   table.mix-table tbody td.cell { padding:6px; text-align:center; }
