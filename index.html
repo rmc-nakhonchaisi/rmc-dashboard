@@ -39,6 +39,9 @@
   .card { background:#fff; border:1px solid var(--border); border-radius:10px; padding:20px 22px; }
   .card-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
   .card-head h2 { margin:0; font-size:18px; color:var(--ink); }
+  .group-tabs { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:18px; }
+  .group-tabs button { border:1px solid #d1d5db; background:#fff; color:var(--ink-soft); border-radius:20px; padding:6px 14px; font-size:13px; cursor:pointer; }
+  .group-tabs button.active { background:var(--blue); border-color:var(--blue); color:#fff; font-weight:600; }
   .search-box { border:1px solid #d1d5db; border-radius:6px; padding:7px 12px; font-size:13px; width:220px; }
   .head-actions { display:flex; gap:10px; }
 
@@ -152,7 +155,26 @@ function computeDerivedValue(key, baseValue, multiplier) {
 let state = {
   search: '',
   mixSections: [],
+  selectedGroup: null,
 };
+
+function stripGroupPrefix(name) {
+  return String(name || '').replace(/^\(\d+\)\s*/, '').trim();
+}
+
+// จัดกลุ่มคอลัมน์ของ "สูตร 1 คิว" ตามชื่อ (ตัด "(n)" นำหน้าออก) เพื่อทำเป็นแท็บเลือกดูทีละสูตร
+function computeGroups() {
+  const base = state.mixSections[0];
+  if (!base) return [];
+  const order = [];
+  const map = new Map();
+  base.products.forEach((p, idx) => {
+    const key = stripGroupPrefix(p.name) || p.name || '(ไม่มีชื่อ)';
+    if (!map.has(key)) { map.set(key, []); order.push(key); }
+    map.get(key).push(idx);
+  });
+  return order.map(key => ({ key, indexes: map.get(key) }));
+}
 
 function esc(v) {
   return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -181,10 +203,11 @@ async function getDashboardData() {
 }
 
 // ---------- Concrete formula tab ----------
-function buildMixSectionHtml(section, term, baseSection) {
+function buildMixSectionHtml(section, term, baseSection, allowedIdx) {
   const indexed = section.products
     .map((p, idx) => ({ p, idx }))
-    .filter(({ p }) => !term || p.name.toLowerCase().includes(term));
+    .filter(({ p }) => !term || p.name.toLowerCase().includes(term))
+    .filter(({ idx }) => !allowedIdx || allowedIdx.has(idx));
   const isDerivedSection = section.multiplier != null;
 
   let headerCell;
@@ -246,13 +269,23 @@ function buildMixSectionHtml(section, term, baseSection) {
 
 function renderConcreteTab() {
   const term = (state.search || '').trim().toLowerCase();
+  const groups = computeGroups();
+  if (!state.selectedGroup || !groups.some(g => g.key === state.selectedGroup)) {
+    state.selectedGroup = groups.length ? groups[0].key : null;
+  }
+  const activeGroup = groups.find(g => g.key === state.selectedGroup);
+  const allowedIdx = activeGroup ? new Set(activeGroup.indexes) : null;
+
   let html = `<div class="card">
     <div class="card-head">
       <h2>สูตรคอนกรีต</h2>
       <input class="search-box" placeholder="ค้นหาผลิตภัณฑ์..." id="concreteSearch" value="${esc(state.search)}" />
     </div>`;
+  html += `<div class="group-tabs">` + groups.map(g =>
+    `<button data-action="set-group" data-group="${esc(g.key)}" class="${g.key === state.selectedGroup ? 'active' : ''}">${esc(g.key)}</button>`
+  ).join('') + `</div>`;
   const baseSection = state.mixSections[0];
-  state.mixSections.forEach(sec => { html += buildMixSectionHtml(sec, term, baseSection); });
+  state.mixSections.forEach(sec => { html += buildMixSectionHtml(sec, term, baseSection, allowedIdx); });
   html += `<div class="legend-row">
     <div class="legend-group">
       <span class="legend-label">ถพ.น้ำยา 1.08</span>
@@ -313,7 +346,10 @@ document.addEventListener('click', async (e) => {
   const action = t.dataset.action;
 
   try {
-    if (action === 'product-remove') {
+    if (action === 'set-group') {
+      state.selectedGroup = t.dataset.group;
+      renderConcreteTab();
+    } else if (action === 'product-remove') {
       const pid = t.dataset.product;
       const baseSec = state.mixSections[0];
       const baseIdx = baseSec ? baseSec.products.findIndex(p => p.id === pid) : -1;
