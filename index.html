@@ -281,8 +281,59 @@ function parseStrengthDate(s) {
 
 // แปลงข้อความที่คัดลอกจาก Excel (คั่นด้วย Tab หรือ comma) เป็นรายการผลทดสอบ
 // คอลัมน์: วันที่ทดสอบ, กลุ่มสินค้า, ผลลูก1, ผลลูก2, ผลลูก3
+// วันที่แบบ D/M/YY พ.ศ. 2 หลัก จากตาราง QC รายวัน เช่น "1/9/69" -> 2026-09-01
+function parseThaiShortDate(s) {
+  const m = s.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (!m) return null;
+  let [, d, mo, y] = m.map(Number);
+  if (y < 100) y += 2500;
+  const adYear = y - 543;
+  return `${adYear}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+function addDays(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+// ตารางบันทึก QC รายวัน 3 บล็อก (แผ่นพื้น/หกเหลี่ยม, I-22,26, I-18,S-18) หัวตาราง 2 แถว มี "(PCE)"
+// ใช้เฉพาะค่าเฉลี่ย 7 วันของแต่ละบล็อก, วันที่ทดสอบ = วันที่เก็บตัวอย่าง + 7 วัน
+function parseDailyQcPaste(lines) {
+  if (!lines[0] || !lines[0].includes('(PCE)')) return null;
+  const blocks = [
+    { group: 'แผ่นพื้น', avgIdx: 9, sampleIdx: [6, 7, 8] },
+    { group: 'I-22,26', avgIdx: 26, sampleIdx: [23, 24, 25] },
+    { group: 'I-15,18', avgIdx: 43, sampleIdx: [40, 41, 42] },
+  ];
+  const records = [];
+  for (let i = 2; i < lines.length; i++) {
+    const cols = lines[i].split('\t');
+    const sampleDate = parseThaiShortDate(cols[0] || '');
+    if (!sampleDate) continue;
+    blocks.forEach(b => {
+      const avgRaw = (cols[b.avgIdx] || '').trim();
+      if (!avgRaw) return;
+      const avg = parseFloat(avgRaw);
+      if (isNaN(avg)) return;
+      const r1 = parseFloat(cols[b.sampleIdx[0]]);
+      const r2 = parseFloat(cols[b.sampleIdx[1]]);
+      const r3 = parseFloat(cols[b.sampleIdx[2]]);
+      records.push({
+        testDate: addDays(sampleDate, 7), group: b.group,
+        result1: isNaN(r1) ? null : r1, result2: isNaN(r2) ? null : r2, result3: isNaN(r3) ? null : r3,
+        avg,
+      });
+    });
+  }
+  return { records, errors: [] };
+}
+
 function parseStrengthPaste(text) {
-  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+  const daily = parseDailyQcPaste(lines);
+  if (daily) return daily;
+
   const records = [];
   const errors = [];
   lines.forEach((line, i) => {
@@ -382,7 +433,7 @@ function renderStrengthChartCard() {
 
   if (state.showAddStrength) {
     html += `<div class="add-drawing-form" style="flex-direction:column; align-items:stretch;">
-      <div class="hint-note">คัดลอกจาก Excel มาวางได้เลย เรียงคอลัมน์: <b>วันที่ทดสอบ(YYYY-MM-DD), กลุ่มสินค้า, ผลลูก1, ผลลูก2, ผลลูก3</b> — 1 แถวต่อ 1 รายการ</div>
+      <div class="hint-note">วางได้ 2 แบบ: (1) คัดลอกทั้งตาราง QC รายวัน (P1(PCE)/P2(PCE) 3 บล็อก) มาวางได้เลย ระบบดึงเฉพาะค่าเฉลี่ย 7 วันให้อัตโนมัติ หรือ (2) พิมพ์เอง เรียงคอลัมน์: <b>วันที่ทดสอบ(YYYY-MM-DD), กลุ่มสินค้า, ผลลูก1, ผลลูก2, ผลลูก3</b> — 1 แถวต่อ 1 รายการ</div>
       <textarea id="strengthPaste" rows="6" placeholder="2026-09-25	I-22,26	500	510	505
 2026-09-26	แผ่นพื้น	480	470	490" style="width:100%; font-family:monospace; font-size:13px; padding:8px; border:1px solid #d1d5db; border-radius:6px;"></textarea>
       <div style="display:flex; gap:8px;">
